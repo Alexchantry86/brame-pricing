@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brame Pricing · Connexion</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #FAF8F2; --panel: #FFFFFF; --ink: #1A1916; --ink-2: #5E5C58; --ink-3: #92908A;
+    --line: #E8E4DA; --rule: #D8D3C6; --accent: #154E80; --danger: #A32D2D; --ok: #4F7B27;
+    --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+    font-family: var(--font-sans); display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.login-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 44px 40px; width: 100%; max-width: 420px; box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+}
+.brand { font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px 0; }
+.subtitle { font-size: 13px; color: var(--ink-2); margin-bottom: 32px; }
+label { display: block; font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; margin-top: 16px; }
+input[type="email"], input[type="password"] {
+    width: 100%; padding: 11px 13px; border: 1px solid var(--rule); border-radius: 4px;
+    font-family: var(--font-mono); font-size: 13px; background: var(--bg); color: var(--ink);
+}
+input:focus { outline: none; border-color: var(--accent); background: var(--panel); }
+.btn-primary {
+    width: 100%; background: var(--ink); color: var(--bg); border: 0; padding: 12px;
+    font-family: var(--font-sans); font-size: 13.5px; font-weight: 500; cursor: pointer; border-radius: 4px; margin-top: 24px;
+}
+.btn-primary:hover:not(:disabled) { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: wait; }
+.btn-link { background: transparent; border: 0; color: var(--ink-2); font-family: var(--font-mono); font-size: 11px; cursor: pointer; padding: 8px 0; text-decoration: underline; text-underline-offset: 3px; }
+.btn-link:hover { color: var(--ink); }
+.status { margin-top: 16px; font-family: var(--font-mono); font-size: 11.5px; min-height: 18px; line-height: 1.5; }
+.status.error { color: var(--danger); }
+.status.ok { color: var(--ok); }
+.status.info { color: var(--ink-3); }
+.footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+</style>
+</head>
+<body>
+<div class="login-card">
+    <div class="brand">BRAME DÉVELOPPEMENT</div>
+    <h1>Dashboard Pricing</h1>
+    <div class="subtitle">Connexion sécurisée · CAP'EMBAL + LEGAA</div>
+    <form id="loginForm" autocomplete="on">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username">
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" required autocomplete="current-password">
+        <button type="submit" class="btn-primary" id="btnLogin">Se connecter</button>
+    </form>
+    <div id="status" class="status"></div>
+    <div class="footer">
+        <button type="button" class="btn-link" id="btnForgot">Mot de passe oublié ?</button>
+        <span style="font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);">v10.0</span>
+    </div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, setPersistence, browserLocalPersistence }
+    from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyC6jvKOMlnA9MnrjgSrMJPOg7gcj42VWOM",
+    authDomain: "brame-pricing.firebaseapp.com",
+    projectId: "brame-pricing",
+    storageBucket: "brame-pricing.firebasestorage.app",
+    messagingSenderId: "231945596325",
+    appId: "1:231945596325:web:30799c72284dc5c2e70c4c"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence);
+
+const emailInp = document.getElementById('email');
+const pwdInp = document.getElementById('password');
+const btnLogin = document.getElementById('btnLogin');
+const btnForgot = document.getElementById('btnForgot');
+const statusEl = document.getElementById('status');
+const form = document.getElementById('loginForm');
+
+function setStatus(msg, type) { statusEl.textContent = msg; statusEl.className = 'status ' + (type || ''); }
+
+onAuthStateChanged(auth, (user) => {
+    if (user) { setStatus('✓ Session active · redirection…', 'ok'); setTimeout(() => { window.location.href = 'dashboard.html'; }, 400); }
+});
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = emailInp.value.trim(), pwd = pwdInp.value;
+    if (!email || !pwd) { setStatus('Remplis email + mot de passe', 'error'); return; }
+    btnLogin.disabled = true;
+    setStatus('Vérification…', 'info');
+    try {
+        await signInWithEmailAndPassword(auth, email, pwd);
+        setStatus('✓ Connexion réussie · redirection…', 'ok');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 400);
+    } catch (err) {
+        btnLogin.disabled = false;
+        const code = err.code || '';
+        let msg;
+        if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) msg = '✗ Email ou mot de passe incorrect';
+        else if (code.includes('too-many-requests')) msg = '✗ Trop de tentatives, réessaie dans quelques minutes';
+        else if (code.includes('user-disabled')) msg = '✗ Compte désactivé — contacte l\u2019admin';
+        else if (code.includes('network-request-failed')) msg = '✗ Erreur réseau, vérifie ta connexion';
+        else msg = '✗ ' + (err.message || code);
+        setStatus(msg, 'error');
+    }
+});
+
+btnForgot.addEventListener('click', async () => {
+    const email = emailInp.value.trim();
+    if (!email) { setStatus('Saisis d\u2019abord ton email ci-dessus', 'error'); emailInp.focus(); return; }
+    setStatus('Envoi du lien de réinitialisation…', 'info');
+    try {
+        await sendPasswordResetEmail(auth, email);
+        setStatus('✓ Email envoyé à ' + email + ' · vérifie ta boîte (et les spams)', 'ok');
+    } catch (err) {
+        const code = err.code || '';
+        if (code.includes('user-not-found') || code.includes('invalid-email')) setStatus('✗ Email inconnu', 'error');
+        else setStatus('✗ ' + (err.message || code), 'error');
+    }
+});
+</script>
+</body>
+</html>
