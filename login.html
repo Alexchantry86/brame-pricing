@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Pilotage pricing · Connexion</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #FAF8F2; --panel: #FFFFFF; --ink: #1A1916; --ink-2: #3D3B37;
+    --ink-3: #92908A; --rule: rgba(26,25,22,0.13); --danger: #A32D2D; --ok: #4F7B27;
+    --font-sans: 'IBM Plex Sans', -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 40px 44px; max-width: 420px; width: 100%; box-shadow: 0 8px 32px rgba(26,25,22,0.06); }
+.eyebrow { font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px; color: var(--ink-3); text-transform: uppercase; margin-bottom: 10px; }
+.title { font-size: 22px; font-weight: 600; margin: 0 0 8px; }
+.subtitle { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); margin-bottom: 32px; }
+label { display: block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 1.2px; color: var(--ink-3); text-transform: uppercase; margin-bottom: 8px; }
+input { width: 100%; padding: 11px 14px; font-family: var(--font-sans); font-size: 14px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--ink); transition: border-color 0.15s; }
+input:focus { outline: none; border-color: var(--ink); background: var(--panel); }
+.field { margin-bottom: 20px; }
+button { width: 100%; padding: 12px 16px; background: var(--ink); color: var(--panel); border: 0; border-radius: 4px; font-family: var(--font-sans); font-size: 13.5px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+button:hover { background: var(--ink-2); }
+button:disabled { background: var(--ink-3); cursor: not-allowed; }
+.msg { padding: 10px 12px; border-radius: 3px; font-family: var(--font-mono); font-size: 11.5px; margin-top: 14px; display: none; }
+.msg.error { background: rgba(163,45,45,0.08); color: var(--danger); border-left: 3px solid var(--danger); display: block; }
+.msg.ok { background: rgba(79,123,39,0.08); color: var(--ok); border-left: 3px solid var(--ok); display: block; }
+.link { display: block; margin-top: 16px; text-align: center; font-size: 12px; color: var(--ink-3); cursor: pointer; text-decoration: underline; }
+.link:hover { color: var(--ink); }
+.step { display: none; }
+.step.active { display: block; }
+.footer { text-align: center; margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+    <div class="eyebrow">PILOTAGE PRICING · BRAME</div>
+    <h1 class="title">Connexion</h1>
+    <div class="subtitle" id="subtitle">Saisis le code d'accès</div>
+
+    <!-- ÉTAPE 1 : Code d'accès -->
+    <div class="step active" id="stepCode">
+        <div class="field">
+            <label for="code">Code d'accès</label>
+            <input type="password" id="code" placeholder="••••••" autocomplete="off" autofocus>
+        </div>
+        <button id="btnCode">Continuer</button>
+        <div class="msg" id="msgCode"></div>
+    </div>
+
+    <!-- ÉTAPE 2 : Login Firebase -->
+    <div class="step" id="stepAuth">
+        <div class="field">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="prenom.nom@..." autocomplete="username">
+        </div>
+        <div class="field">
+            <label for="password">Mot de passe</label>
+            <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button id="btnLogin">Se connecter</button>
+        <span class="link" id="linkReset">Mot de passe oublié ?</span>
+        <div class="msg" id="msgAuth"></div>
+    </div>
+
+    <!-- ÉTAPE 3 : Reset password -->
+    <div class="step" id="stepReset">
+        <div class="field">
+            <label for="emailReset">Email</label>
+            <input type="email" id="emailReset" placeholder="prenom.nom@...">
+        </div>
+        <button id="btnReset">Envoyer le lien de réinitialisation</button>
+        <span class="link" id="linkBackAuth">← Retour</span>
+        <div class="msg" id="msgReset"></div>
+    </div>
+
+    <div class="footer">V1.0 · <span id="verDate">30/08/2026</span></div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyC6jvKOMlnA9MnrjgSrMJPOg7gcj42VWOM",
+    authDomain: "brame-pricing.firebaseapp.com",
+    projectId: "brame-pricing",
+    storageBucket: "brame-pricing.firebasestorage.app",
+    messagingSenderId: "231945596325",
+    appId: "1:231945596325:web:30799c72284dc5c2e70c4c"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// SHA-256 attendu (hash de "brame2026")
+const EXPECTED_HASH = "b58e890acf7f0e2218a2495b6973fb76d7e78c6b1ce0f9abd62e8a55cc7dba8b";
+
+async function sha256(str) {
+    const buf = new TextEncoder().encode(str);
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function showStep(id) {
+    document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.id === id));
+    document.querySelectorAll('.msg').forEach(m => { m.textContent = ''; m.className = 'msg'; });
+    if (id === 'stepCode') document.getElementById('subtitle').textContent = "Saisis le code d'accès";
+    else if (id === 'stepAuth') document.getElementById('subtitle').textContent = "Identifiants Firebase";
+    else if (id === 'stepReset') document.getElementById('subtitle').textContent = "Réinitialiser le mot de passe";
+}
+
+function showMsg(id, text, type='error') {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'msg ' + type;
+}
+
+async function getIp() {
+    try {
+        const r = await fetch('https://api.ipify.org?format=json');
+        const d = await r.json();
+        return d.ip;
+    } catch(e) { return 'unknown'; }
+}
+
+async function logEvent(email, action, details='') {
+    try {
+        const ip = await getIp();
+        await db.collection('logs').add({
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            email: email,
+            action: action,
+            ip: ip,
+            userAgent: navigator.userAgent.substring(0, 200),
+            details: details
+        });
+    } catch(e) { console.warn('Log failed', e); }
+}
+
+// Étape 1 : code d'accès
+document.getElementById('btnCode').addEventListener('click', async () => {
+    const code = document.getElementById('code').value.trim();
+    if (!code) { showMsg('msgCode', 'Code requis'); return; }
+    const h = await sha256(code);
+    if (h === EXPECTED_HASH) {
+        sessionStorage.setItem('bramePricingCodeOk', '1');
+        showStep('stepAuth');
+        document.getElementById('email').focus();
+    } else {
+        showMsg('msgCode', 'Code incorrect');
+    }
+});
+document.getElementById('code').addEventListener('keypress', e => {
+    if (e.key === 'Enter') document.getElementById('btnCode').click();
+});
+
+// Étape 2 : Firebase auth
+document.getElementById('btnLogin').addEventListener('click', async () => {
+    if (sessionStorage.getItem('bramePricingCodeOk') !== '1') { showStep('stepCode'); return; }
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const pwd = document.getElementById('password').value;
+    if (!email || !pwd) { showMsg('msgAuth', 'Email et mot de passe requis'); return; }
+    const btn = document.getElementById('btnLogin');
+    btn.disabled = true; btn.textContent = 'Connexion...';
+    try {
+        await auth.signInWithEmailAndPassword(email, pwd);
+        await logEvent(email, 'login');
+        window.location.href = 'index.html';
+    } catch(e) {
+        let msg = 'Erreur de connexion';
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'Email ou mot de passe incorrect';
+        else if (e.code === 'auth/too-many-requests') msg = 'Trop de tentatives. Réessaie plus tard.';
+        else msg = e.message;
+        showMsg('msgAuth', msg);
+        btn.disabled = false; btn.textContent = 'Se connecter';
+    }
+});
+document.getElementById('password').addEventListener('keypress', e => {
+    if (e.key === 'Enter') document.getElementById('btnLogin').click();
+});
+document.getElementById('linkReset').addEventListener('click', () => showStep('stepReset'));
+
+// Étape 3 : reset
+document.getElementById('btnReset').addEventListener('click', async () => {
+    const email = document.getElementById('emailReset').value.trim().toLowerCase();
+    if (!email) { showMsg('msgReset', 'Email requis'); return; }
+    try {
+        await auth.sendPasswordResetEmail(email);
+        showMsg('msgReset', 'Un email de réinitialisation a été envoyé.', 'ok');
+    } catch(e) {
+        showMsg('msgReset', e.message);
+    }
+});
+document.getElementById('linkBackAuth').addEventListener('click', () => showStep('stepAuth'));
+
+// Si déjà connecté (session Firebase encore valide), redirect direct
+setTimeout(() => {
+    if (auth.currentUser && sessionStorage.getItem('bramePricingCodeOk') === '1') {
+        window.location.href = 'index.html';
+    }
+}, 1500);
+
+// Si code déjà validé dans la session
+if (sessionStorage.getItem('bramePricingCodeOk') === '1') showStep('stepAuth');
+</script>
+</body>
+</html>
