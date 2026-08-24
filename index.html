@@ -1800,7 +1800,11 @@ function resolveWindow(rows, win) {
     }
 
     // Helper : accepte string OU array pour multi-select (V10.19)
-    const asArr = (x) => Array.isArray(x) ? x : [x];
+    // Robuste : null/undefined → [], string → [string], array → array
+    const asArr = (x) => {
+        if (x == null || x === '') return [];
+        return Array.isArray(x) ? x : [x];
+    };
 
     // Cas 3 — Semestre(s) : buckets = mois des semestres sélectionnés
     if (t === 'semester') {
@@ -4144,9 +4148,11 @@ function normalizeWindowValue(wtype, value) {
 }
 
 function initWindowSelector(tabKey) {
+  try {
     const root = document.querySelector('.window-selector[data-tab="' + tabKey + '"]');
     if (!root) return;
     const sel = root.querySelector('select.ws-value');
+    if (!sel) { console.warn('[initWindowSelector] no ws-value select for', tabKey); return; }
     const hintEl = root.querySelector('.window-hint');
 
     // Créer le dropdown multi (V10.19) une seule fois
@@ -4290,6 +4296,9 @@ function initWindowSelector(tabKey) {
         });
         mPanel.addEventListener('click', (e) => e.stopPropagation());
     }
+  } catch (err) {
+    console.error('[initWindowSelector] erreur pour ' + tabKey + ':', err);
+  }
 }
 
 // Fermeture globale des panels multi au clic-outside / Échap
