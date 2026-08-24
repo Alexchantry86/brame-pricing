@@ -118,6 +118,9 @@ h3.subsection.fourniture { border-left-color: var(--fourniture); }
 .chart-wrap.mini { height: 180px; }
 
 table.matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.matrix.watch-table { table-layout: fixed; }
+table.matrix.watch-table th, table.matrix.watch-table td { overflow: hidden; text-overflow: ellipsis; }
+table.matrix.watch-table td:first-child { white-space: nowrap; }
 table.matrix thead th { text-align: left; font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; padding: 10px 8px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 table.matrix tbody td { padding: 8px 8px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
 table.matrix tfoot td { padding: 10px 8px; border-top: 2px solid var(--ink); font-weight: 500; }
@@ -333,7 +336,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.19 · MULTI-SÉLECTION PÉRIODES · 30 AOÛT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.21 · COLONNES WATCH ALIGNÉES · 30 AOÛT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -3985,7 +3988,7 @@ function renderWatchUnified() {
 
             panel.innerHTML = '<div class="panel-header"><div class="panel-title"><span class="pill ' + pillCls + '" style="margin-right:8px;">' + sub + '</span>Top ' + clientsList.length + ' clients à surveiller</div><div class="panel-meta">' + refLabel + ' ' + soc + ' : <strong>' + refDisplay + '</strong> · sur ' + sumN(subRows).toLocaleString('fr-FR') + ' OF total</div></div>' + (clientsList.length === 0
                 ? '<div style="padding:16px;font-family:var(--font-mono);font-size:12px;color:var(--ink-3);">Aucun client sous la ' + refLabel + ' avec au moins ' + minOf + ' OF sur la fenêtre.</div>'
-                : '<table class="matrix"><thead><tr><th>Client</th><th class="num">Nb OF</th><th class="num">Surface m²</th><th class="num">CA HT</th><th class="num">' + mainColLabel + '</th><th class="num">' + ecartLabel + '</th><th class="num">Marge brute</th></tr></thead><tbody>' + clientsList.map(c => {
+                : '<table class="matrix watch-table"><colgroup><col style="width:auto;"><col style="width:70px;"><col style="width:110px;"><col style="width:120px;"><col style="width:130px;"><col style="width:130px;"><col style="width:130px;"></colgroup><thead><tr><th>Client</th><th class="num">Nb OF</th><th class="num">Surface m²</th><th class="num">CA HT</th><th class="num">' + mainColLabel + '</th><th class="num">' + ecartLabel + '</th><th class="num">Marge brute</th></tr></thead><tbody>' + clientsList.map(c => {
                     const marginColor = c.margePct < 30 ? '#BA7517' : c.margePct < 50 ? '#5E5C58' : '#4F7B27';
                     const mainCellVal = axis === 'ratio' ? c.px.toFixed(2) + ' €' : c.margePct.toFixed(1) + ' %';
                     const ecartDisplay = axis === 'ratio' ? c.ecart.toFixed(1) + '%' : c.ecart.toFixed(1) + ' pts';
