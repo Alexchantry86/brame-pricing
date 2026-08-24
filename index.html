@@ -232,45 +232,6 @@ footer.note strong { color: var(--ink); font-weight: 500; }
 }
 .window-selector select.ws-value:hover { border-color: var(--ink); }
 .window-selector select.ws-value:focus { outline: none; border-color: var(--ink); }
-
-/* Dropdown multi-select période (V10.19) */
-.window-selector .ws-multi { position: relative; display: none; }
-.window-selector .ws-multi.visible { display: inline-block; }
-.window-selector .ws-multi-trigger {
-    background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
-    padding: 7px 32px 7px 12px; font-family: var(--font-sans); font-size: 12px; font-weight: 500;
-    color: var(--ink); cursor: pointer; min-width: 190px; text-align: left;
-    display: inline-flex; align-items: center; justify-content: space-between; gap: 8px;
-    position: relative; transition: border-color 0.15s;
-}
-.window-selector .ws-multi-trigger:hover { border-color: var(--ink); }
-.window-selector .ws-multi-trigger.active { border-color: var(--ink); background: rgba(26,25,22,0.03); }
-.window-selector .ws-multi-trigger svg { width: 12px; height: 12px; color: var(--ink-3); flex-shrink: 0; }
-.window-selector .ws-multi-panel {
-    position: absolute; top: calc(100% + 4px); left: 0; z-index: 500;
-    background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
-    min-width: 220px; max-height: 340px; overflow: hidden;
-    box-shadow: 0 8px 24px rgba(26,25,22,0.12);
-    padding: 8px; display: none; flex-direction: column;
-}
-.window-selector .ws-multi-panel.open { display: flex; }
-.window-selector .ws-multi-actions { display: flex; gap: 4px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
-.window-selector .ws-multi-actions button {
-    flex: 1; background: var(--bg); border: 1px solid var(--rule); border-radius: 3px;
-    padding: 5px 8px; font-family: var(--font-mono); font-size: 10px; cursor: pointer;
-    color: var(--ink-2); letter-spacing: 0.5px; text-transform: uppercase;
-    transition: all 0.1s;
-}
-.window-selector .ws-multi-actions button:hover { background: var(--ink); color: var(--panel); border-color: var(--ink); }
-.window-selector .ws-multi-list { overflow-y: auto; max-height: 260px; }
-.window-selector .ws-multi-item {
-    display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer;
-    font-family: var(--font-sans); font-size: 12px; color: var(--ink-2); border-radius: 3px;
-    transition: background 0.08s;
-}
-.window-selector .ws-multi-item:hover { background: var(--bg); color: var(--ink); }
-.window-selector .ws-multi-item.selected { background: rgba(26,25,22,0.04); color: var(--ink); font-weight: 500; }
-.window-selector .ws-multi-item input { margin: 0; cursor: pointer; }
 .window-hint { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.3px; }
 /* Firebase Auth : masquer le dashboard tant que l'authentification n'est pas confirmée */
 body { opacity: 1; transition: opacity 0.25s ease; }
@@ -334,7 +295,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.19 · MULTI-SÉLECTION PÉRIODES · 30 AOÛT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.18 · QUANTITÉS PRISES EN COMPTE · 30 AOÛT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -1349,8 +1310,8 @@ _auth.onAuthStateChanged(async (user) => {
             console.log('[auth] Session restaurée entre-temps :', _auth.currentUser.email);
             return; // onAuthStateChanged se re-déclenchera avec le user
         }
-        console.log('[auth] Non authentifié après délai, redirection vers index.html');
-        window.location.replace('index.html');
+        console.log('[auth] Non authentifié après délai, redirection vers login.html');
+        window.location.replace('login.html');
         return;
     }
     currentUser = user;
@@ -1799,61 +1760,35 @@ function resolveWindow(rows, win) {
         return { buckets, gran: 'month', hint: 'année ' + v + ' · ' + buckets.length + ' mois' };
     }
 
-    // Helper : accepte string OU array pour multi-select (V10.19)
-    // Robuste : null/undefined → [], string → [string], array → array
-    const asArr = (x) => {
-        if (x == null || x === '') return [];
-        return Array.isArray(x) ? x : [x];
-    };
-
-    // Cas 3 — Semestre(s) : buckets = mois des semestres sélectionnés
+    // Cas 3 — Semestre : buckets = mois du semestre
     if (t === 'semester') {
-        const wanted = new Set(asArr(v));
-        const semRows = rows.filter(r => wanted.has(r.iso_s));
+        const semRows = rows.filter(r => r.iso_s === v);
         const keys = [...new Set(semRows.map(r => r.iso_month))].sort();
         const buckets = keys.map(k => ({ key: k, label: bucketLabel(k, 'month'), rows: semRows.filter(r => r.iso_month === k) }));
-        const wantedArr = [...wanted].sort();
-        const hint = wantedArr.length === 1 ? wantedArr[0] + ' · ' + buckets.length + ' mois'
-                                             : wantedArr.length + ' semestres · ' + buckets.length + ' mois';
-        return { buckets, gran: 'month', hint: hint };
+        return { buckets, gran: 'month', hint: v + ' · ' + buckets.length + ' mois' };
     }
 
-    // Cas 4 — Trimestre(s) : buckets = mois des trimestres sélectionnés
+    // Cas 4 — Trimestre : buckets = mois du trimestre
     if (t === 'quarter') {
-        const wanted = new Set(asArr(v));
-        const qRows = rows.filter(r => wanted.has(r.iso_q));
+        const qRows = rows.filter(r => r.iso_q === v);
         const keys = [...new Set(qRows.map(r => r.iso_month))].sort();
         const buckets = keys.map(k => ({ key: k, label: bucketLabel(k, 'month'), rows: qRows.filter(r => r.iso_month === k) }));
-        const wantedArr = [...wanted].sort();
-        const hint = wantedArr.length === 1 ? wantedArr[0] + ' · ' + buckets.length + ' mois'
-                                             : wantedArr.length + ' trimestres · ' + buckets.length + ' mois';
-        return { buckets, gran: 'month', hint: hint };
+        return { buckets, gran: 'month', hint: v + ' · ' + buckets.length + ' mois' };
     }
 
-    // Cas 5 — Mois : buckets = semaines des mois sélectionnés
+    // Cas 5 — Mois : buckets = semaines du mois
     if (t === 'month') {
-        const wanted = new Set(asArr(v));
-        const mRows = rows.filter(r => wanted.has(r.iso_month));
+        const mRows = rows.filter(r => r.iso_month === v);
         const keys = [...new Set(mRows.map(r => r.iso_week))].sort();
         const buckets = keys.map(k => ({ key: k, label: bucketLabel(k, 'week'), rows: mRows.filter(r => r.iso_week === k) }));
-        const wantedArr = [...wanted].sort();
-        const hint = wantedArr.length === 1 ? bucketLabel(wantedArr[0], 'month') + ' · ' + buckets.length + ' semaines'
-                                             : wantedArr.length + ' mois · ' + buckets.length + ' semaines';
-        return { buckets, gran: 'week', hint: hint };
+        return { buckets, gran: 'week', hint: bucketLabel(v, 'month') + ' · ' + buckets.length + ' semaines' };
     }
 
-    // Cas 6 — Semaine(s) : 1 bucket par semaine sélectionnée
+    // Cas 6 — Semaine : 1 seul bucket
     if (t === 'week') {
-        const wanted = new Set(asArr(v));
-        const wantedArr = [...wanted].sort();
-        const buckets = wantedArr.map(wk => {
-            const wRows = rows.filter(r => r.iso_week === wk);
-            return { key: wk, label: bucketLabel(wk, 'week'), rows: wRows };
-        });
-        const total = buckets.reduce((s,b) => s + b.rows.length, 0);
-        const hint = wantedArr.length === 1 ? bucketLabel(wantedArr[0], 'week') + ' · ' + total + ' agrégats'
-                                             : wantedArr.length + ' semaines · ' + total + ' agrégats';
-        return { buckets, gran: 'week', hint: hint };
+        const wRows = rows.filter(r => r.iso_week === v);
+        const buckets = [{ key: v, label: bucketLabel(v, 'week'), rows: wRows }];
+        return { buckets, gran: 'week', hint: bucketLabel(v, 'week') + ' · ' + wRows.length + ' agrégats' };
     }
 
     // Fallback
@@ -4116,198 +4051,36 @@ function fillWindowSelector(sel, wtype) {
     });
 }
 
-// Types de fenêtre qui autorisent la sélection multiple (V10.19)
-const MULTI_WINDOW_TYPES = ['semester', 'quarter', 'month', 'week'];
-
-function labelForOption(wtype, val) {
-    if (wtype === 'semester') { const [y, sm] = val.split('-'); return sm + ' ' + y; }
-    if (wtype === 'quarter')  { const [y, qm] = val.split('-'); return qm + ' ' + y; }
-    if (wtype === 'month')    { const [y, mo] = val.split('-'); return fr_months[parseInt(mo)] + ' ' + y; }
-    if (wtype === 'week')     { const [y, w] = val.split('-W'); return 'S' + w + ' / ' + y; }
-    return val;
-}
-
-function optionsForType(wtype) {
-    if (wtype === 'semester') return PAYLOAD.available_periods.semesters.slice().reverse();
-    if (wtype === 'quarter')  return PAYLOAD.available_periods.quarters.slice().reverse();
-    if (wtype === 'month')    return PAYLOAD.available_periods.months.slice().reverse();
-    if (wtype === 'week')     return PAYLOAD.available_periods.weeks.slice().reverse();
-    return [];
-}
-
-// Migre value legacy string vers array pour les types multi
-function normalizeWindowValue(wtype, value) {
-    if (MULTI_WINDOW_TYPES.includes(wtype)) {
-        if (Array.isArray(value)) return value;
-        if (value == null || value === '') return [];
-        return [value];
-    }
-    // Types single (historique, year) : renvoyer un string
-    if (Array.isArray(value)) return value[0] || '';
-    return value || '';
-}
-
 function initWindowSelector(tabKey) {
-  try {
     const root = document.querySelector('.window-selector[data-tab="' + tabKey + '"]');
     if (!root) return;
     const sel = root.querySelector('select.ws-value');
-    if (!sel) { console.warn('[initWindowSelector] no ws-value select for', tabKey); return; }
     const hintEl = root.querySelector('.window-hint');
 
-    // Créer le dropdown multi (V10.19) une seule fois
-    let multi = root.querySelector('.ws-multi');
-    if (!multi) {
-        multi = document.createElement('div');
-        multi.className = 'ws-multi';
-        multi.innerHTML = `
-            <button class="ws-multi-trigger" type="button">
-                <span class="ws-multi-label">…</span>
-                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5L6 7.5L9 4.5"/></svg>
-            </button>
-            <div class="ws-multi-panel">
-                <div class="ws-multi-actions">
-                    <button type="button" data-action="all">Tout</button>
-                    <button type="button" data-action="none">Effacer</button>
-                </div>
-                <div class="ws-multi-list"></div>
-            </div>
-        `;
-        sel.insertAdjacentElement('afterend', multi);
-    }
-    const mTrigger = multi.querySelector('.ws-multi-trigger');
-    const mLabel = multi.querySelector('.ws-multi-label');
-    const mPanel = multi.querySelector('.ws-multi-panel');
-    const mList = multi.querySelector('.ws-multi-list');
-
+    // Fill dropdown selon type actif
     const currentType = state.window[tabKey].type;
-    state.window[tabKey].value = normalizeWindowValue(currentType, state.window[tabKey].value);
-
-    function updateMultiLabel() {
-        const vals = state.window[tabKey].value;
-        const arr = Array.isArray(vals) ? vals : (vals ? [vals] : []);
-        if (arr.length === 0) mLabel.textContent = 'Aucune sélection';
-        else if (arr.length === 1) mLabel.textContent = labelForOption(state.window[tabKey].type, arr[0]);
-        else mLabel.textContent = arr.length + ' sélectionnées';
-        mTrigger.classList.toggle('active', arr.length > 0);
-    }
-
-    function renderMultiList() {
-        const t = state.window[tabKey].type;
-        if (!MULTI_WINDOW_TYPES.includes(t)) return;
-        const opts = optionsForType(t);
-        const selected = new Set(Array.isArray(state.window[tabKey].value) ? state.window[tabKey].value : []);
-        mList.innerHTML = opts.map(o => {
-            const isSel = selected.has(o);
-            return `<label class="ws-multi-item${isSel ? ' selected' : ''}">
-                <input type="checkbox" data-val="${o}" ${isSel ? 'checked' : ''}>
-                <span>${labelForOption(t, o)}</span>
-            </label>`;
-        }).join('');
-        mList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-            cb.addEventListener('change', () => {
-                const val = cb.dataset.val;
-                let arr = Array.isArray(state.window[tabKey].value) ? [...state.window[tabKey].value] : [];
-                if (cb.checked) { if (!arr.includes(val)) arr.push(val); }
-                else { arr = arr.filter(x => x !== val); }
-                state.window[tabKey].value = arr;
-                cb.closest('.ws-multi-item').classList.toggle('selected', cb.checked);
-                updateMultiLabel();
-                switchTab(tabKey);
-            });
-        });
-    }
-
-    function switchMode(wtype) {
-        state.window[tabKey].type = wtype;
-        if (MULTI_WINDOW_TYPES.includes(wtype)) {
-            // Mode multi : cacher <select> natif, afficher dropdown custom
-            sel.style.display = 'none';
-            multi.classList.add('visible');
-            // Défaut : sélectionner la première option (la plus récente)
-            const opts = optionsForType(wtype);
-            state.window[tabKey].value = opts.length > 0 ? [opts[0]] : [];
-            renderMultiList();
-            updateMultiLabel();
-        } else {
-            // Mode single : afficher <select> natif, cacher dropdown custom
-            sel.style.display = '';
-            multi.classList.remove('visible');
-            fillWindowSelector(sel, wtype);
-            const defaultVal = sel.options[0]?.value || '';
-            state.window[tabKey].value = defaultVal;
-            sel.value = defaultVal;
-        }
-        switchTab(tabKey);
-    }
-
-    // Init selon type actif
-    if (MULTI_WINDOW_TYPES.includes(currentType)) {
-        sel.style.display = 'none';
-        multi.classList.add('visible');
-        renderMultiList();
-        updateMultiLabel();
-    } else {
-        fillWindowSelector(sel, currentType);
-        sel.value = state.window[tabKey].value;
-    }
+    fillWindowSelector(sel, currentType);
+    sel.value = state.window[tabKey].value;
 
     // Bind type buttons
     root.querySelectorAll('.type-btn').forEach(btn => {
-        // Éviter double bind si initWindowSelector appelé plusieurs fois
-        if (btn.dataset.bound === '1') return;
-        btn.dataset.bound = '1';
         btn.addEventListener('click', () => {
             const wtype = btn.dataset.wtype;
             root.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b === btn));
-            switchMode(wtype);
+            fillWindowSelector(sel, wtype);
+            // Valeur par défaut : première option du dropdown
+            const defaultVal = sel.options[0]?.value || '';
+            state.window[tabKey] = { type: wtype, value: defaultVal };
+            sel.value = defaultVal;
+            switchTab(tabKey);
         });
     });
-    // Bind select natif (single mode)
-    if (!sel.dataset.bound) {
-        sel.dataset.bound = '1';
-        sel.addEventListener('change', () => {
-            state.window[tabKey].value = sel.value;
-            switchTab(tabKey);
-        });
-    }
-    // Bind actions multi
-    if (!mTrigger.dataset.bound) {
-        mTrigger.dataset.bound = '1';
-        mTrigger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.querySelectorAll('.ws-multi-panel.open').forEach(p => { if (p !== mPanel) p.classList.remove('open'); });
-            mPanel.classList.toggle('open');
-        });
-        multi.querySelector('[data-action="all"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const t = state.window[tabKey].type;
-            state.window[tabKey].value = optionsForType(t).slice();
-            renderMultiList();
-            updateMultiLabel();
-            switchTab(tabKey);
-        });
-        multi.querySelector('[data-action="none"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            state.window[tabKey].value = [];
-            renderMultiList();
-            updateMultiLabel();
-            switchTab(tabKey);
-        });
-        mPanel.addEventListener('click', (e) => e.stopPropagation());
-    }
-  } catch (err) {
-    console.error('[initWindowSelector] erreur pour ' + tabKey + ':', err);
-  }
+    // Bind select
+    sel.addEventListener('change', () => {
+        state.window[tabKey].value = sel.value;
+        switchTab(tabKey);
+    });
 }
-
-// Fermeture globale des panels multi au clic-outside / Échap
-document.addEventListener('click', () => {
-    document.querySelectorAll('.ws-multi-panel.open').forEach(p => p.classList.remove('open'));
-});
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') document.querySelectorAll('.ws-multi-panel.open').forEach(p => p.classList.remove('open'));
-});
 initWindowSelector('global');
 initWindowSelector('suivi');
 initWindowSelector('clients');
@@ -4856,7 +4629,7 @@ document.getElementById('btnLogout')?.addEventListener('click', () => {
     if (confirm('Se déconnecter du dashboard ?')) {
         // Utiliser signOutUser() défini plus bas (Firebase Auth)
         if (typeof signOutUser === 'function') signOutUser();
-        else window.location.href = 'index.html';
+        else window.location.href = 'login.html';
     }
 });
 // ==========================================================================
