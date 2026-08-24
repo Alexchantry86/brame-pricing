@@ -316,10 +316,9 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
                 <button class="nav-item" data-tab="suivi"><span class="nav-item-num">03</span><span class="nav-item-label">Suivi politique tarifaire</span></button>
                 <button class="nav-item" data-tab="clients"><span class="nav-item-num">04</span><span class="nav-item-label">Pricing × marge clients</span></button>
                 <button class="nav-item" data-tab="compare"><span class="nav-item-num">05</span><span class="nav-item-label">Comparatif LEGAA / CAP'EMBAL</span></button>
-                <button class="nav-item" data-tab="watchcap"><span class="nav-item-num">06</span><span class="nav-item-label">CAP'EMBAL · clients à surveiller</span></button>
-                <button class="nav-item" data-tab="watchleg"><span class="nav-item-num">07</span><span class="nav-item-label">LEGAA · clients à surveiller</span></button>
-                <button class="nav-item" data-tab="margeproduit"><span class="nav-item-num">08</span><span class="nav-item-label">Marge brute par produit</span></button>
-                <button class="nav-item admin-only" data-tab="admin" style="display:none;"><span class="nav-item-num">09</span><span class="nav-item-label">⚙ Administration</span></button>
+                <button class="nav-item" data-tab="watch"><span class="nav-item-num">06</span><span class="nav-item-label">Clients à surveiller</span></button>
+                <button class="nav-item" data-tab="margeproduit"><span class="nav-item-num">07</span><span class="nav-item-label">Marge brute par produit</span></button>
+                <button class="nav-item admin-only" data-tab="admin" style="display:none;"><span class="nav-item-num">08</span><span class="nav-item-label">⚙ Administration</span></button>
             </div>
         </div>
         <div>
@@ -373,10 +372,9 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
     <button class="tab" data-tab="suivi"><span class="tab-num">03</span>Suivi politique tarifaire</button>
     <button class="tab" data-tab="clients"><span class="tab-num">04</span>Pricing × marge clients</button>
     <button class="tab" data-tab="compare"><span class="tab-num">05</span>Comparatif LEGAA / CAP'EMBAL</button>
-    <button class="tab" data-tab="watchcap"><span class="tab-num">06</span>CAP'EMBAL · clients à surveiller</button>
-    <button class="tab" data-tab="watchleg"><span class="tab-num">07</span>LEGAA · clients à surveiller</button>
-    <button class="tab" data-tab="margeproduit"><span class="tab-num">08</span>Marge brute par produit</button>
-    <button class="tab admin-only" data-tab="admin" style="display:none;"><span class="tab-num">09</span>⚙ Administration</button>
+    <button class="tab" data-tab="watch"><span class="tab-num">06</span>Clients à surveiller</button>
+    <button class="tab" data-tab="margeproduit"><span class="tab-num">07</span>Marge brute par produit</button>
+    <button class="tab admin-only" data-tab="admin" style="display:none;"><span class="tab-num">08</span>⚙ Administration</button>
 </nav>
 
 <div style="display:flex; align-items:center; gap:14px; margin-bottom:22px; padding:12px 0; border-bottom:1px solid var(--rule);">
@@ -854,10 +852,10 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
 </div>
 
 <!-- ===================== TAB 5 — CAP'EMBAL Clients à surveiller ===================== -->
-<div class="tab-panel" data-tab="watchcap">
+<div class="tab-panel" data-tab="watch">
     <div class="controls-row">
         <span class="controls-label">Fenêtre d'analyse</span>
-        <div class="window-selector" data-tab="watchcap">
+        <div class="window-selector" data-tab="watch">
             <div class="type-toggle">
                 <button class="type-btn active" data-wtype="historique">Historique</button>
                 <button class="type-btn" data-wtype="year">Année</button>
@@ -869,48 +867,23 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <select class="ws-value"></select>
             <span class="window-hint"></span>
         </div>
+        <span class="controls-label" style="margin-left:8px;">Axe d'analyse</span>
+        <div class="type-toggle" id="watchAxisToggle">
+            <button class="type-btn active" data-axis="ratio">Ratio €/m²</button>
+            <button class="type-btn" data-axis="marge">Marge brute</button>
+        </div>
         <span class="controls-label" style="margin-left:8px;">Nb min OF/client</span>
-        <input type="number" id="minOfWatchcap" value="3" min="1" max="100" style="width:60px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;font-family:var(--font-mono);font-size:11px;">
+        <input type="number" id="minOfWatch" value="3" min="1" max="100" style="width:60px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;font-family:var(--font-mono);font-size:11px;">
         <span class="controls-label" style="margin-left:8px;">Comparaison vs</span>
-        <div class="type-toggle" id="watchcapModeToggle">
-            <button class="type-btn active" data-mode="avg">Moyenne CAP'EMBAL</button>
+        <div class="type-toggle" id="watchModeToggle">
+            <button class="type-btn active" data-mode="avg">Moyenne</button>
             <button class="type-btn" data-mode="target">Target</button>
         </div>
     </div>
     <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-bottom:14px;padding:8px 12px;background:var(--bg);border-left:3px solid var(--ink-3);">
-        ⓘ Pour chaque famille produit, les 10 clients avec le <strong>pricing €/m² le plus en dessous</strong> de la référence (moyenne CAP'EMBAL sur la fenêtre, ou target selon toggle). Utile pour identifier des opportunités de repricing.
+        ⓘ Pour chaque famille produit, les 10 clients avec l'écart le plus <strong>négatif</strong> vs la référence (moyenne société ou target). Axe <strong>Ratio €/m²</strong> = repérer les sous-tarifications ; axe <strong>Marge brute</strong> = repérer les marges basses (coûts élevés). Filtre société global en haut : Toutes → 2 sections empilées (LEGAA + CAP'EMBAL).
     </div>
-    <div id="watchcapContent"></div>
-</div>
-
-<!-- ===================== TAB 6 — LEGAA Clients à surveiller ===================== -->
-<div class="tab-panel" data-tab="watchleg">
-    <div class="controls-row">
-        <span class="controls-label">Fenêtre d'analyse</span>
-        <div class="window-selector" data-tab="watchleg">
-            <div class="type-toggle">
-                <button class="type-btn active" data-wtype="historique">Historique</button>
-                <button class="type-btn" data-wtype="year">Année</button>
-                <button class="type-btn" data-wtype="semester">Semestre</button>
-                <button class="type-btn" data-wtype="quarter">Trimestre</button>
-                <button class="type-btn" data-wtype="month">Mois</button>
-                <button class="type-btn" data-wtype="week">Semaine</button>
-            </div>
-            <select class="ws-value"></select>
-            <span class="window-hint"></span>
-        </div>
-        <span class="controls-label" style="margin-left:8px;">Nb min OF/client</span>
-        <input type="number" id="minOfWatchleg" value="3" min="1" max="100" style="width:60px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;font-family:var(--font-mono);font-size:11px;">
-        <span class="controls-label" style="margin-left:8px;">Comparaison vs</span>
-        <div class="type-toggle" id="watchlegModeToggle">
-            <button class="type-btn active" data-mode="avg">Moyenne LEGAA</button>
-            <button class="type-btn" data-mode="target">Target</button>
-        </div>
-    </div>
-    <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-bottom:14px;padding:8px 12px;background:var(--bg);border-left:3px solid var(--ink-3);">
-        ⓘ Pour chaque famille produit, les 10 clients avec le <strong>pricing €/m² le plus en dessous</strong> de la référence. Utile pour identifier des opportunités de repricing.
-    </div>
-    <div id="watchlegContent"></div>
+    <div id="watchContent"></div>
 </div>
 
 <!-- ===================== TAB 7 — Marge brute par produit ===================== -->
@@ -1721,13 +1694,13 @@ const state = {
         suivi:   { type: 'historique', value: '12m' },
         clients: { type: 'historique', value: '12m' },
         compare: { type: 'historique', value: '12m' },
-        watchcap:  { type: 'historique', value: '12m' },
-        watchleg:  { type: 'historique', value: '12m' },
+        watch:  { type: 'historique', value: '12m' },
         margeproduit: { type: 'historique', value: '12m' },
         suivimarge: { type: 'historique', value: '12m' }
     },
-    clientFilter: { global: [], suivi: [], clients: [], compare: [], watchcap: [], watchleg: [], margeproduit: [], suivimarge: [] },
-    minOf: { watchcap: 3, watchleg: 3 },
+    clientFilter: { global: [], suivi: [], clients: [], compare: [], watch: [], margeproduit: [], suivimarge: [] },
+    minOf: { watch: 3 },
+    axis: 'ratio',  // 'ratio' = écart €/m² · 'marge' = écart marge %
     soc: 'all',
     compareMode: 'ref'  // 'ref' = base 100 (prix référence) · 'target' = comparaison vs target politique prix
 };
@@ -3909,6 +3882,129 @@ function renderTab8() {
 // =========================================================================
 // TAB 5/6 — Clients à surveiller (pricing bas vs moyenne ou target)
 // =========================================================================
+// V10.20 : onglet unifié Clients à surveiller
+// Utilise state.soc (filtre société global), state.axis (ratio/marge)
+function renderWatchUnified() {
+    const tabKey = 'watch';
+    const win = state.window[tabKey];
+    const minOf = state.minOf[tabKey] || 3;
+    const modeBtn = document.querySelector('#watchModeToggle .type-btn.active');
+    const mode = modeBtn ? modeBtn.dataset.mode : 'avg';
+    const axisBtn = document.querySelector('#watchAxisToggle .type-btn.active');
+    const axis = axisBtn ? axisBtn.dataset.axis : (state.axis || 'ratio');
+    state.axis = axis;
+
+    const container = document.getElementById('watchContent');
+    container.innerHTML = '';
+
+    // Sociétés à afficher (une section chacune)
+    const socsToShow = state.soc === 'all' ? ['LEGAA', "CAP'EMBAL"] : [state.soc];
+
+    socsToShow.forEach((soc, socIdx) => {
+        let rows = ROWS.filter(r => r.soc === soc);
+        const cf = state.clientFilter[tabKey];
+        if (cf && cf.length > 0) {
+            const set = new Set(cf);
+            rows = rows.filter(r => set.has(r.client));
+        }
+        const { buckets } = resolveWindow(rows, win);
+        const rowsInWindow = buckets.flatMap(b => b.rows);
+
+        // En-tête de section (uniquement si 2 sociétés affichées)
+        if (socsToShow.length > 1) {
+            const header = document.createElement('div');
+            header.style.cssText = 'font-family:var(--font-mono);font-size:13px;letter-spacing:2px;color:var(--ink);padding:14px 0 10px;margin-top:' + (socIdx === 0 ? '0' : '24px') + ';border-bottom:1px solid var(--rule);text-transform:uppercase;font-weight:600;';
+            header.textContent = '── ' + soc + ' ──';
+            container.appendChild(header);
+        }
+
+        let sectionHasContent = false;
+
+        PONDERABLE_SUBCATS.forEach(sub => {
+            const subRows = rowsInWindow.filter(r => r.subcat === sub);
+            if (subRows.length === 0) return;
+            const totalCa = sumCa(subRows);
+            const totalSurf = sumSurf(subRows);
+            const totalMarge = subRows.reduce((s,r) => s + (r.marge || 0), 0);
+            const avgPx = totalSurf > 0 ? totalCa/totalSurf : 0;
+            const avgMargePct = totalCa > 0 ? totalMarge/totalCa*100 : 0;
+
+            // Référence selon axe et mode
+            const targetPx = state_params[soc]?.targetPrices?.[sub] || 0;
+            let refValue, refLabel, refUnit;
+            if (axis === 'ratio') {
+                refValue = mode === 'target' ? targetPx : avgPx;
+                refLabel = mode === 'target' ? 'target' : 'moyenne';
+                refUnit = ' €/m²';
+            } else {
+                // Axe marge : ref = target marge % (défaut 78%) ou moyenne marge % soc
+                refValue = mode === 'target' ? _targetMarginPct : avgMargePct;
+                refLabel = mode === 'target' ? 'target marge' : 'moyenne marge';
+                refUnit = ' %';
+            }
+
+            // Grouper par client
+            const byClient = {};
+            subRows.forEach(r => {
+                if (!byClient[r.client]) byClient[r.client] = { n:0, n_pointed:0, ca:0, surf:0, marge:0, cout:0 };
+                byClient[r.client].n += r.n;
+                byClient[r.client].n_pointed += r.n_pointed;
+                byClient[r.client].ca += r.ca;
+                byClient[r.client].surf += r.surf;
+                byClient[r.client].marge += r.marge;
+                byClient[r.client].cout += r.cout;
+            });
+
+            // Enrichir + calculer écart selon axe
+            const clientsAll = Object.entries(byClient).map(([client, v]) => {
+                const px = v.surf > 0 ? v.ca/v.surf : 0;
+                const margePct = v.ca > 0 ? v.marge/v.ca*100 : 0;
+                let ecart;
+                if (axis === 'ratio') {
+                    ecart = (v.surf > 0 && refValue > 0) ? (px - refValue) / refValue * 100 : null;
+                } else {
+                    // Écart absolu en points de marge % (plus lisible que ratio de %)
+                    ecart = (v.ca > 0 && refValue > 0) ? (margePct - refValue) : null;
+                }
+                return { client, ...v, px, margePct, ecart };
+            });
+
+            const clientsList = clientsAll
+                .filter(c => c.n >= minOf && c.ecart != null && c.ecart < 0)
+                .sort((a,b) => a.ecart - b.ecart)
+                .slice(0, 10);
+
+            const pillCls = sub.startsWith('Prest')?'prest':(sub.startsWith('Fourn')?'fourn':'other');
+            const panel = document.createElement('div');
+            panel.className = 'panel';
+
+            // Colonnes selon axe
+            const mainColLabel = axis === 'ratio' ? '€/m² client' : 'Marge % client';
+            const ecartLabel = axis === 'ratio' ? 'Écart vs ' + refLabel : 'Écart (pts marge)';
+            const refDisplay = axis === 'ratio' ? refValue.toFixed(2) + ' €/m²' : refValue.toFixed(1) + ' %';
+
+            panel.innerHTML = '<div class="panel-header"><div class="panel-title"><span class="pill ' + pillCls + '" style="margin-right:8px;">' + sub + '</span>Top ' + clientsList.length + ' clients à surveiller</div><div class="panel-meta">' + refLabel + ' ' + soc + ' : <strong>' + refDisplay + '</strong> · sur ' + sumN(subRows).toLocaleString('fr-FR') + ' OF total</div></div>' + (clientsList.length === 0
+                ? '<div style="padding:16px;font-family:var(--font-mono);font-size:12px;color:var(--ink-3);">Aucun client sous la ' + refLabel + ' avec au moins ' + minOf + ' OF sur la fenêtre.</div>'
+                : '<table class="matrix"><thead><tr><th>Client</th><th class="num">Nb OF</th><th class="num">Surface m²</th><th class="num">CA HT</th><th class="num">' + mainColLabel + '</th><th class="num">' + ecartLabel + '</th><th class="num">Marge brute</th></tr></thead><tbody>' + clientsList.map(c => {
+                    const marginColor = c.margePct < 30 ? '#BA7517' : c.margePct < 50 ? '#5E5C58' : '#4F7B27';
+                    const mainCellVal = axis === 'ratio' ? c.px.toFixed(2) + ' €' : c.margePct.toFixed(1) + ' %';
+                    const ecartDisplay = axis === 'ratio' ? c.ecart.toFixed(1) + '%' : c.ecart.toFixed(1) + ' pts';
+                    return '<tr><td>' + c.client + '</td><td class="num">' + c.n + '</td><td class="num">' + fmtNum(c.surf) + '</td><td class="num">' + fmtMoney(c.ca) + '</td><td class="num">' + mainCellVal + '</td><td class="num" style="background:rgba(186,117,23,0.13);color:#BA7517;font-weight:600;">' + ecartDisplay + '</td><td class="num" style="color:' + marginColor + ';">' + fmtMoney(c.marge) + '</td></tr>';
+                }).join('') + '</tbody></table>');
+            container.appendChild(panel);
+            sectionHasContent = true;
+        });
+
+        if (!sectionHasContent) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:20px;font-family:var(--font-mono);font-size:12px;color:var(--ink-3);text-align:center;';
+            empty.textContent = 'Aucune donnée pour ' + soc + ' sur cette fenêtre.';
+            container.appendChild(empty);
+        }
+    });
+}
+
+// Ancienne fonction gardée pour compat éventuelle
 function renderWatchClients(soc, tabKey, modeToggleId) {
     const win = state.window[tabKey];
     const minOf = state.minOf[tabKey] || 3;
@@ -4028,8 +4124,7 @@ function switchTab(tab) {
     else if (tab === 'suivi') renderTab2();
     else if (tab === 'clients') renderTab3();
     else if (tab === 'compare') renderTab4();
-    else if (tab === 'watchcap') renderWatchClients("CAP'EMBAL", 'watchcap', 'watchcapModeToggle');
-    else if (tab === 'watchleg') renderWatchClients('LEGAA', 'watchleg', 'watchlegModeToggle');
+    else if (tab === 'watch') renderWatchUnified();
     else if (tab === 'margeproduit') renderTab7();
     else if (tab === 'suivimarge') renderTab8();
 }
@@ -4296,35 +4391,27 @@ initWindowSelector('global');
 initWindowSelector('suivi');
 initWindowSelector('clients');
 initWindowSelector('compare');
-initWindowSelector('watchcap');
-initWindowSelector('watchleg');
+initWindowSelector('watch');
 initWindowSelector('margeproduit');
 initWindowSelector('suivimarge');
 
-// Bindings des toggles mode dans les onglets watch
-['watchcapModeToggle', 'watchlegModeToggle'].forEach(id => {
-    document.getElementById(id)?.querySelectorAll('.type-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('#' + id + ' .type-btn').forEach(b => b.classList.toggle('active', b === btn));
-            const tabKey = id === 'watchcapModeToggle' ? 'watchcap' : 'watchleg';
-            if (state.tab === tabKey) {
-                const soc = tabKey === 'watchcap' ? "CAP'EMBAL" : 'LEGAA';
-                renderWatchClients(soc, tabKey, id);
-            }
-        });
+// V10.20 : Handlers onglet unifié Clients à surveiller
+document.getElementById('watchModeToggle')?.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#watchModeToggle .type-btn').forEach(b => b.classList.toggle('active', b === btn));
+        if (state.tab === 'watch') renderWatchUnified();
     });
 });
-// Input Nb min OF
-['minOfWatchcap', 'minOfWatchleg'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', (e) => {
-        const tabKey = id === 'minOfWatchcap' ? 'watchcap' : 'watchleg';
-        state.minOf[tabKey] = parseInt(e.target.value) || 3;
-        if (state.tab === tabKey) {
-            const soc = tabKey === 'watchcap' ? "CAP'EMBAL" : 'LEGAA';
-            const modeId = tabKey === 'watchcap' ? 'watchcapModeToggle' : 'watchlegModeToggle';
-            renderWatchClients(soc, tabKey, modeId);
-        }
+document.getElementById('watchAxisToggle')?.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#watchAxisToggle .type-btn').forEach(b => b.classList.toggle('active', b === btn));
+        state.axis = btn.dataset.axis;
+        if (state.tab === 'watch') renderWatchUnified();
     });
+});
+document.getElementById('minOfWatch')?.addEventListener('change', (e) => {
+    state.minOf.watch = parseInt(e.target.value) || 3;
+    if (state.tab === 'watch') renderWatchUnified();
 });
 
 function toast(msg, ms) {
@@ -4401,12 +4488,12 @@ async function generateFullPDF() {
         { title: '1 · LEGAA', pages: [
             { tab: 'global',   sel: '#panelGlobalLegaa', label: 'LEGAA · Indice prix pondéré' },
             { tab: 'suivi',    sel: '#panelSuiviLegaa',  label: 'LEGAA · Suivi politique tarifaire' },
-            { tab: 'watchleg', sel: '.tab-panel[data-tab="watchleg"]', label: 'LEGAA · Clients à surveiller' }
+            { tab: 'watch', sel: '.tab-panel[data-tab="watch"]', label: 'LEGAA · Clients à surveiller', soc: 'LEGAA' }
         ]},
         { title: '2 · CAP’EMBAL', pages: [
             { tab: 'global',   sel: '#panelGlobalCap',   label: 'CAP’EMBAL · Indice prix pondéré' },
             { tab: 'suivi',    sel: '#panelSuiviCap',    label: 'CAP’EMBAL · Suivi politique tarifaire' },
-            { tab: 'watchcap', sel: '.tab-panel[data-tab="watchcap"]', label: 'CAP’EMBAL · Clients à surveiller' }
+            { tab: 'watch', sel: '.tab-panel[data-tab="watch"]', label: 'CAP’EMBAL · Clients à surveiller', soc: "CAP'EMBAL" }
         ]},
         { title: '3 · Comparaison LEGAA / CAP’EMBAL', pages: [
             { tab: 'compare',  sel: '.tab-panel[data-tab="compare"]',  label: 'Comparatif LEGAA vs CAP’EMBAL' },
@@ -4515,9 +4602,15 @@ async function generateFullPDF() {
         for (const page of section.pages) {
             stepIndex++;
             updateProgress(stepIndex, 'Rendu · ' + page.label);
-            logProgress('Basculement onglet : ' + page.tab);
+            logProgress('Basculement onglet : ' + page.tab + (page.soc ? ' · soc=' + page.soc : ''));
+            // V10.20 : forcer le filtre société si demandé (pour l'onglet unifié 'watch')
+            if (page.soc && state.soc !== page.soc) {
+                state.soc = page.soc;
+                document.querySelectorAll('#socFilter [data-soc]').forEach(b => b.classList.toggle('active', b.dataset.soc === page.soc));
+            }
             // Bascule sur l'onglet
             if (state.tab !== page.tab) switchTab(page.tab);
+            else if (page.soc) switchTab(page.tab); // Re-render pour prendre en compte le nouveau soc
             // Attendre le rendu (charts sont async)
             await new Promise(r => setTimeout(r, 1200));
 
@@ -5495,7 +5588,7 @@ function onFirestoreStateSnapshot(doc) {
     if (typeof fillEmptyHistoricalFromOdoo === 'function') fillEmptyHistoricalFromOdoo();
     // Ré-init sélecteurs et re-render
     initWindowSelector('global'); initWindowSelector('suivi'); initWindowSelector('clients');
-    initWindowSelector('compare'); initWindowSelector('watchcap'); initWindowSelector('watchleg');
+    initWindowSelector('compare'); initWindowSelector('watch'); initWindowSelector('margeproduit'); initWindowSelector('suivimarge');
     switchTab(state.tab || 'global');
 }
 
