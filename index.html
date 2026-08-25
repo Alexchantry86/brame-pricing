@@ -335,6 +335,19 @@ input.weight-inline:focus { background: var(--panel); border-color: var(--ink); 
     .chart-wrap { height: 200px !important; }
     .chart-wrap.large { height: 240px !important; }
 
+    /* --- Sécurité : évite qu'un élément déborde et casse le layout --- */
+
+    /* V10.24 · Masquer les métadonnées et labels superflus sur mobile */
+    /* Bloc "date + metaTotal" (encart avec dates et stats) */
+    .header-right .meta { display: none !important; }
+    /* Bloc "Version + Fichier source + Sync" */
+    .dashboard-meta > div:nth-child(1),  /* Version tag */
+    .dashboard-meta > div:nth-child(2),  /* Fichier source */
+    .dashboard-meta > div:nth-child(3) { /* Sync status */
+        display: none !important;
+    }
+    /* On garde : boutons upload/sync (4), file input, badges user + logout (5) */
+
     /* ------ ONGLETS BARRE (secondaire) ------ */
     .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
     .tab { flex-shrink: 0; padding: 8px 10px; font-size: 11px; }
@@ -506,7 +519,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.23 · MOBILE V2 · REFONTE · 30 AOÛT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.24 · MOBILE ÉPURÉ · 30 AOÛT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -2417,6 +2430,7 @@ function renderTab1() {
             }, {
                 id: 'barValueLabels',
                 afterDatasetsDraw(chart) {
+                    if (window.innerWidth <= 768) return; // V10.24 · mobile : pas de labels sur barres
                     const { ctx } = chart;
                     ctx.save();
                     ctx.font = '600 10.5px "IBM Plex Mono"';
@@ -3075,6 +3089,7 @@ function renderMiniCard(containerEl, subcat, soc) {
         }, {
             id: 'barLabels',
             afterDatasetsDraw(chart) {
+                if (window.innerWidth <= 768) return; // V10.24 · mobile : pas de labels sur barres
                 const { ctx, scales } = chart;
                 const meta = chart.getDatasetMeta(0);
                 ctx.save();
@@ -3447,6 +3462,7 @@ function renderTab4() {
         plugins: [{
             id: 'mixSegmentLabels',
             afterDatasetsDraw(chart) {
+                if (window.innerWidth <= 768) return; // V10.24 · mobile : pas de labels
                 const { ctx } = chart;
                 ctx.save();
                 ctx.font = '600 11px "IBM Plex Mono"';
