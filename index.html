@@ -171,73 +171,173 @@ input.weight-inline:focus { background: var(--panel); border-color: var(--ink); 
 .miniKpiRowCompact .kpi-val { font-weight: 600; color: var(--ink); }
 
 /* ================================================================ */
-/* V10.22 · Responsive mobile (viewport < 768px)                     */
+/* V10.23 · Responsive mobile (viewport < 768px) — refonte complète  */
 /* ================================================================ */
 @media (max-width: 768px) {
-    /* --- Panels scrollables horizontalement pour les tables --- */
-    .panel { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .panel > table { min-width: 640px; } /* garantit lisibilité, panel scrolle */
-    .panel > div > table { min-width: 640px; }
+    /* ------ HEADER ------ */
+    body { overflow-x: hidden; padding: 0; }
+    .container { padding: 10px !important; max-width: 100% !important; }
+    header.top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+    }
+    header.top > div:first-child { gap: 12px !important; align-items: center; }
+    .brand-eyebrow { font-size: 9px !important; }
+    .brand-title { font-size: 18px !important; line-height: 1.2; margin: 4px 0 !important; }
+    .brand-sub { font-size: 10.5px !important; line-height: 1.3; }
+    .nav-burger-btn { width: 44px !important; height: 44px !important; flex-shrink: 0; }
+    .nav-burger-btn span { width: 22px !important; height: 2.5px !important; }
+    .header-right { flex-direction: column; align-items: stretch; gap: 8px; width: 100%; }
+    .header-right .meta { text-align: left; }
+    .meta-date { font-size: 11px; }
+    #metaTotal { font-size: 11px; }
+    .dashboard-meta { flex-direction: column !important; align-items: stretch !important; margin-top: 4px !important; gap: 6px !important; }
+    .dashboard-meta > div:first-child { text-align: left; }  /* version tag */
+    .dashboard-meta .user-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; padding: 4px 8px; }
+    .dashboard-meta button { padding: 8px 12px; font-size: 11.5px; }
+    /* Boutons Upload/Sync : en pile pleine largeur */
+    .dashboard-meta > div[style*="flex-wrap:wrap"] { flex-direction: column; align-items: stretch; }
+    .dashboard-meta > div[style*="flex-wrap:wrap"] button { width: 100%; }
+    /* Boutons user + logout : côte à côte compacts */
+    .dashboard-meta > div[style*="align-items:center"] { justify-content: space-between; }
+    /* Boutons export PDF / Excel : row compacte, icônes + texte réduit */
+    .export-buttons { flex-wrap: wrap; gap: 6px; }
+    .export-btn { padding: 8px 10px !important; font-size: 10.5px !important; flex: 1 1 auto; min-width: 90px; }
+    .export-btn svg { width: 14px !important; height: 14px !important; }
 
-    /* --- Contrôles empilés verticalement --- */
+    /* ------ CONTRÔLES / FILTRES ------ */
     .controls-row {
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
+        margin-bottom: 12px;
     }
     .controls-row > * { width: auto; }
-    .controls-label { font-size: 10px; letter-spacing: 1px; }
-
-    /* Toggles / type-toggle : passent en flex-wrap pour tenir sur la largeur */
-    .type-toggle { flex-wrap: wrap; }
-    .type-toggle .type-btn { flex: 1 1 auto; min-width: 70px; padding: 6px 10px; font-size: 11px; }
-
-    /* Toggle société : passe en 3 colonnes égales */
-    #socFilter { display: flex; }
-    #socFilter [data-soc] { flex: 1; padding: 8px 4px; font-size: 12px; }
-
+    .controls-label { font-size: 10px; letter-spacing: 1px; margin-bottom: 2px; }
+    /* Type-toggle en grid pour éviter le débordement en haut : boutons en 3 colonnes fixes */
+    .type-toggle { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 4px; padding: 4px; }
+    .type-toggle .type-btn {
+        flex: none !important; min-width: 0; width: 100%;
+        padding: 8px 4px; font-size: 11px; text-align: center;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* Toggle société : 3 colonnes */
+    #socFilter { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; }
+    #socFilter [data-soc] { padding: 10px 4px; font-size: 12px; }
     /* Sélecteurs fenêtre : full width */
-    .window-selector select.ws-value { width: 100%; padding: 8px 12px; }
-    .window-selector .ws-multi { display: inline-block; width: 100%; }
-    .window-selector .ws-multi.visible { display: block; }
-    .window-selector .ws-multi-trigger { width: 100%; min-width: 0; }
-    .window-selector .ws-multi-panel { width: 100%; }
+    .window-selector { display: flex; flex-direction: column; gap: 8px; }
+    .window-selector select.ws-value { width: 100%; padding: 10px 12px; font-size: 13px; }
+    .window-selector .ws-multi { width: 100%; }
+    .window-selector .ws-multi-trigger { width: 100%; min-width: 0; padding: 10px 32px 10px 12px; }
+    .window-selector .ws-multi-panel { width: 100%; max-height: 260px; }
 
-    /* --- KPIs plus compacts --- */
+    /* ------ KPIs ------ */
     .kpis { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
     .kpi { padding: 10px 12px; }
     .kpi-value { font-size: 18px; }
-    .kpi-eyebrow { font-size: 9px; margin-bottom: 5px; }
+    .kpi-eyebrow { font-size: 9px; margin-bottom: 5px; letter-spacing: 1px; }
     .kpi-sub { font-size: 10px; margin-top: 5px; }
 
-    /* Header : passer en colonne, réduire les stats */
-    header, .header, .top-bar { flex-wrap: wrap; }
+    /* ------ BANDEAU INFO ------ */
+    div[style*="border-left:3px solid var(--ink-3)"] { font-size: 10.5px !important; padding: 8px 10px !important; line-height: 1.4; }
 
-    /* Bandeau info : réduire padding */
-    div[style*="border-left:3px solid var(--ink-3)"] { font-size: 10.5px !important; padding: 6px 10px !important; }
-
-    /* Tables : padding réduit, plus lisibles */
+    /* ------ TABLES GÉNÉRALES : scrollables horizontales avec ombre indicative ------ */
+    .panel { overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
+    .panel > table, .panel > div > table { min-width: 560px; }
+    /* Ombre latérale droite pour indiquer qu'on peut scroller */
+    .panel::after {
+        content: ''; position: sticky; right: 0; top: 0;
+        display: block; width: 14px; height: 100%;
+        pointer-events: none;
+        box-shadow: inset -14px 0 10px -10px rgba(26,25,22,0.12);
+    }
     table.matrix { font-size: 11px; }
-    table.matrix thead th { padding: 8px 6px 6px; font-size: 9px; }
+    table.matrix thead th { padding: 8px 6px 6px; font-size: 9px; letter-spacing: 0.5px; }
     table.matrix tbody td { padding: 6px 6px; }
 
-    /* Tables watch : garder les largeurs fixes mais panel scrollable */
-    table.matrix.watch-table { min-width: 720px; }
+    /* ------ TABLES WATCH : refonte en cartes empilées (mobile-cards) ------ */
+    /* Le colgroup + table-layout fixed est trop rigide en mobile. */
+    /* On transforme la table en cartes : chaque row devient une carte. */
+    table.matrix.watch-table { min-width: 0; table-layout: auto; display: block; }
+    table.matrix.watch-table colgroup { display: none; }
+    table.matrix.watch-table thead { display: none; }
+    table.matrix.watch-table tbody { display: block; }
+    table.matrix.watch-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "client ecart"
+            "stats  ecart"
+            "money  money";
+        gap: 4px 12px;
+        padding: 12px;
+        margin-bottom: 8px;
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        background: var(--panel);
+    }
+    table.matrix.watch-table tbody td { display: block; padding: 0; border: none; }
+    /* Client (col 1) — nom en gras, plein largeur */
+    table.matrix.watch-table tbody td:nth-child(1) {
+        grid-area: client;
+        font-weight: 600; font-size: 13px; color: var(--ink);
+        white-space: normal; text-overflow: unset; overflow: visible;
+    }
+    /* Nb OF (col 2) + Surface (col 3) + CA HT (col 4) — regroupées en meta */
+    table.matrix.watch-table tbody td:nth-child(2)::before { content: attr(data-lbl); }
+    /* On les mets sur la ligne "stats" via un pseudo-inline */
+    table.matrix.watch-table tbody td:nth-child(2),
+    table.matrix.watch-table tbody td:nth-child(3),
+    table.matrix.watch-table tbody td:nth-child(4) {
+        grid-area: stats;
+        font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3);
+        text-align: left !important; display: inline-block; margin-right: 12px;
+    }
+    /* Écart (col 6) — grand, à droite, très visible */
+    table.matrix.watch-table tbody td:nth-child(6) {
+        grid-area: ecart;
+        font-family: var(--font-mono); font-size: 16px; font-weight: 600;
+        text-align: right;
+        background: transparent !important;
+        color: #BA7517 !important;
+        align-self: center;
+    }
+    /* €/m² Client (col 5) + Marge (col 7) : dernière ligne, sur 2 colonnes */
+    table.matrix.watch-table tbody td:nth-child(5),
+    table.matrix.watch-table tbody td:nth-child(7) {
+        grid-area: money;
+        font-family: var(--font-mono); font-size: 11.5px;
+        display: inline-block; margin-right: 16px;
+        text-align: left !important;
+    }
+    /* Étiquette avant chaque valeur : injectée via CSS ::before */
+    table.matrix.watch-table tbody td:nth-child(2)::before { content: 'OF: '; color: var(--ink-3); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    table.matrix.watch-table tbody td:nth-child(3)::before { content: ' · m²: '; color: var(--ink-3); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    table.matrix.watch-table tbody td:nth-child(4)::before { content: ' · CA: '; color: var(--ink-3); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    table.matrix.watch-table tbody td:nth-child(5)::before { content: 'Prix: '; color: var(--ink-3); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
+    table.matrix.watch-table tbody td:nth-child(7)::before { content: 'Marge: '; color: var(--ink-3); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
+    /* Le panel qui contient la table watch : pas de scroll horizontal (les cartes s'adaptent) */
+    .panel:has(> table.matrix.watch-table) { overflow-x: visible; }
 
-    /* Grid two-col : passe en une seule colonne */
-    .two-col, .compare-grid { grid-template-columns: 1fr !important; }
+    /* ------ GRIDS 2 COLONNES ------ */
+    .two-col, .compare-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
 
-    /* Panel titres plus compacts */
+    /* ------ PANELS ------ */
+    .panel { padding: 12px !important; }
+    .panel-header { flex-wrap: wrap; gap: 6px; }
     .panel-title { font-size: 13px; }
     .panel-meta { font-size: 10px; }
 
-    /* Chart wraps : hauteur réduite en mobile */
-    .chart-wrap { height: 220px !important; }
-    .chart-wrap.large { height: 260px !important; }
+    /* ------ CHARTS ------ */
+    .chart-wrap { height: 200px !important; }
+    .chart-wrap.large { height: 240px !important; }
 
-    /* Sécurité : évite qu'un élément déborde et casse le layout */
-    body { overflow-x: hidden; }
-    .container { padding: 12px !important; }
+    /* ------ ONGLETS BARRE (secondaire) ------ */
+    .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+    .tab { flex-shrink: 0; padding: 8px 10px; font-size: 11px; }
 }
 .miniChart { height: 220px; position: relative; }
 
@@ -406,7 +506,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.22 · MOBILE RESPONSIVE · 30 AOÛT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.23 · MOBILE V2 · REFONTE · 30 AOÛT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
