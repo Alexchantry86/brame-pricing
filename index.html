@@ -504,7 +504,8 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
                 <button class="nav-item" data-tab="compare"><span class="nav-item-num">05</span><span class="nav-item-label">Comparatif LEGAA / CAP'EMBAL</span></button>
                 <button class="nav-item" data-tab="watch"><span class="nav-item-num">06</span><span class="nav-item-label">Clients à surveiller</span></button>
                 <button class="nav-item" data-tab="margeproduit"><span class="nav-item-num">07</span><span class="nav-item-label">Marge brute par produit</span></button>
-                <button class="nav-item admin-only" data-tab="admin" style="display:none;"><span class="nav-item-num">08</span><span class="nav-item-label">⚙ Administration</span></button>
+                <button class="nav-item" data-tab="analyseclient"><span class="nav-item-num">08</span><span class="nav-item-label">Analyse client</span></button>
+                <button class="nav-item admin-only" data-tab="admin" style="display:none;"><span class="nav-item-num">09</span><span class="nav-item-label">⚙ Administration</span></button>
             </div>
         </div>
         <div>
@@ -519,7 +520,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.26 · BERCEAUX + STATUT DEVIS · 22 SEPT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.27 · ANALYSE CLIENT 360° · 22 SEPT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -560,7 +561,8 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
     <button class="tab" data-tab="compare"><span class="tab-num">05</span>Comparatif LEGAA / CAP'EMBAL</button>
     <button class="tab" data-tab="watch"><span class="tab-num">06</span>Clients à surveiller</button>
     <button class="tab" data-tab="margeproduit"><span class="tab-num">07</span>Marge brute par produit</button>
-    <button class="tab admin-only" data-tab="admin" style="display:none;"><span class="tab-num">08</span>⚙ Administration</button>
+    <button class="tab" data-tab="analyseclient"><span class="tab-num">08</span>Analyse client</button>
+    <button class="tab admin-only" data-tab="admin" style="display:none;"><span class="tab-num">09</span>⚙ Administration</button>
 </nav>
 
 <div style="display:flex; align-items:center; gap:14px; margin-bottom:22px; padding:12px 0; border-bottom:1px solid var(--rule); flex-wrap:wrap;">
@@ -1312,6 +1314,90 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
 </div>
 
 <!-- ============================================================ -->
+<!-- ONGLET 08 · ANALYSE CLIENT (V10.27)                          -->
+<!-- ============================================================ -->
+<div class="tab-panel" data-tab="analyseclient">
+    <div class="controls-row" style="flex-wrap:wrap;gap:14px;align-items:center;">
+        <span class="controls-label">Client</span>
+        <select id="acClientSelect" style="min-width:280px; padding:8px 12px; font-family:var(--font-sans); font-size:13px; border:1px solid var(--rule); border-radius:4px; background:var(--panel);">
+            <option value="">— Sélectionne un client —</option>
+        </select>
+        <span class="controls-label" style="margin-left:12px;">Fenêtre d'analyse</span>
+        <div class="window-selector" data-tab="analyseclient">
+            <div class="type-toggle">
+                <button class="type-btn active" data-wtype="historique">Historique</button>
+                <button class="type-btn" data-wtype="year">Année</button>
+                <button class="type-btn" data-wtype="semester">Semestre</button>
+                <button class="type-btn" data-wtype="quarter">Trimestre</button>
+                <button class="type-btn" data-wtype="month">Mois</button>
+                <button class="type-btn" data-wtype="week">Semaine</button>
+            </div>
+            <select class="ws-value"></select>
+            <span class="window-hint"></span>
+        </div>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-bottom:14px;padding:8px 12px;background:var(--bg);border-left:3px solid var(--ink-3);">
+        ⓘ Vue 360° d'un client. Cet onglet <strong>ignore le filtre statut global</strong> et présente séparément : Bon de commande (analyse marge/prix) · Devis annulés/perdus (CA potentiel perdu) · Devis en cours (backlog).
+    </div>
+    <div id="acEmpty" style="padding:60px 20px;text-align:center;color:var(--ink-3);font-family:var(--font-mono);font-size:13px;">
+        Sélectionne un client pour afficher son analyse.
+    </div>
+    <div id="acContent" style="display:none;">
+        <!-- KPIs récap -->
+        <section class="kpis" id="acKpisTop" style="grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));"></section>
+
+        <!-- Évolution CA + marge mensuelle -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">Évolution CA HT + Marge mensuelle</div>
+                <div class="panel-meta">Bon de commande · fenêtre affichée</div>
+            </div>
+            <div class="chart-wrap large" style="height:280px;"><canvas id="acChartEvolution"></canvas></div>
+        </div>
+
+        <div class="two-col">
+            <!-- Ratio €/m² par sous-cat vs société -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Ratio €/m² par sous-catégorie</div>
+                    <div class="panel-meta">Client vs moyenne société</div>
+                </div>
+                <div id="acRatioTable"></div>
+            </div>
+
+            <!-- Marge brute par sous-cat -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Marge brute par sous-catégorie</div>
+                    <div class="panel-meta">Bon de commande · fenêtre affichée</div>
+                </div>
+                <div id="acMargeTable"></div>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <!-- Backlog -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Devis en cours (backlog)</div>
+                    <div class="panel-meta">Statut : autre que BdC / Annulé / Perdu</div>
+                </div>
+                <div id="acBacklogTable"></div>
+            </div>
+
+            <!-- Perdus + annulés -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Devis perdus / annulés</div>
+                    <div class="panel-meta">CA potentiel perdu</div>
+                </div>
+                <div id="acPerdusTable"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
 <!-- ONGLET ADMINISTRATION (visible uniquement pour rôle admin)   -->
 <!-- ============================================================ -->
 <div class="tab-panel" data-tab="admin">
@@ -1903,8 +1989,10 @@ const state = {
         compare: { type: 'historique', value: '12m' },
         watch:  { type: 'historique', value: '12m' },
         margeproduit: { type: 'historique', value: '12m' },
-        suivimarge: { type: 'historique', value: '12m' }
+        suivimarge: { type: 'historique', value: '12m' },
+        analyseclient: { type: 'historique', value: '12m' }
     },
+    analyseClient: '',  // V10.27 · client sélectionné dans l'onglet Analyse client
     clientFilter: { global: [], suivi: [], clients: [], compare: [], watch: [], margeproduit: [], suivimarge: [] },
     minOf: { watch: 3 },
     axis: 'ratio',  // 'ratio' = écart €/m² · 'marge' = écart marge %
@@ -4231,6 +4319,233 @@ function renderWatchUnified() {
     });
 }
 
+// V10.27 · Onglet Analyse client — vue 360° d'un client
+let _acChartEvolution = null;
+
+function initAcClientSelector() {
+    // Peuple le select à partir de ROWS_MASTER (contient tous statuts confondus)
+    // Trie par CA décroissant (tous statuts, pour ne pas oublier les clients qui n'ont que des perdus)
+    try {
+        const sel = document.getElementById('acClientSelect');
+        if (!sel) return;
+        const caByClient = {};
+        for (const r of ROWS_MASTER) {
+            if (!r.client || r.client === '—') continue;
+            caByClient[r.client] = (caByClient[r.client] || 0) + (r.ca || 0);
+        }
+        const sorted = Object.entries(caByClient)
+            .sort((a, b) => b[1] - a[1])
+            .map(([c, ca]) => c);
+        const current = state.analyseClient;
+        sel.innerHTML = '<option value="">— Sélectionne un client —</option>' +
+            sorted.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === current ? ' selected' : '') + '>' + c + '</option>').join('');
+        if (!sel.dataset.bound) {
+            sel.dataset.bound = '1';
+            sel.addEventListener('change', () => {
+                state.analyseClient = sel.value;
+                renderAnalyseClient();
+            });
+        }
+    } catch (e) { console.error('[initAcClientSelector]', e); }
+}
+
+function renderAnalyseClient() {
+    try {
+        const client = state.analyseClient;
+        const empty = document.getElementById('acEmpty');
+        const content = document.getElementById('acContent');
+        if (!client) {
+            if (empty) empty.style.display = '';
+            if (content) content.style.display = 'none';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+        if (content) content.style.display = '';
+
+        const win = state.window.analyseclient || { type: 'historique', value: '12m' };
+        // Toutes les rows du client tous statuts confondus
+        const allRows = ROWS_MASTER.filter(r => r.client === client);
+        const bdcRows = allRows.filter(r => (r.status || 'bdc') === 'bdc');
+        const annuleRows = allRows.filter(r => r.status === 'annule');
+        const perduRows = allRows.filter(r => r.status === 'perdu');
+        // Backlog = tout ce qui n'est ni BdC/annule/perdu (statut inconnu / futur "en cours")
+        const backlogRows = allRows.filter(r => {
+            const s = r.status || 'bdc';
+            return s !== 'bdc' && s !== 'annule' && s !== 'perdu';
+        });
+
+        // Société majoritaire du client
+        const socCa = {};
+        for (const r of allRows) socCa[r.soc] = (socCa[r.soc] || 0) + r.ca;
+        const soc = Object.entries(socCa).sort((a,b) => b[1] - a[1])[0]?.[0] || "CAP'EMBAL";
+
+        // Rows BdC dans la fenêtre pour analyses marge/prix
+        const { buckets: bdcBuckets, hint: winHint } = resolveWindow(bdcRows, win);
+        const bdcInWin = bdcBuckets.flatMap(b => b.rows);
+
+        // ---- KPIs TOP ----
+        const caBdC = sumCa(bdcInWin);
+        const margeBdC = sumMarge(bdcInWin);
+        const margePct = caBdC > 0 ? margeBdC / caBdC * 100 : 0;
+        const surfBdC = sumSurf(bdcInWin);
+        const ratioBdC = surfBdC > 0 ? caBdC / surfBdC : 0;
+        const nOF = sumN(bdcInWin);
+        const caPerdu = sumCa(perduRows);
+        const caAnnule = sumCa(annuleRows);
+        const caBacklog = sumCa(backlogRows);
+        const nPerdu = sumN(perduRows);
+        const nAnnule = sumN(annuleRows);
+        const nBacklog = sumN(backlogRows);
+
+        const kpisEl = document.getElementById('acKpisTop');
+        if (kpisEl) {
+            kpisEl.innerHTML =
+                '<div class="kpi"><div class="kpi-eyebrow">Société</div><div class="kpi-value" style="font-size:16px;">' + soc + '</div><div class="kpi-sub">' + winHint + '</div></div>' +
+                '<div class="kpi"><div class="kpi-eyebrow">CA HT (BdC)</div><div class="kpi-value">' + fmtMoney(caBdC) + '</div><div class="kpi-sub">' + nOF + ' OF</div></div>' +
+                '<div class="kpi"><div class="kpi-eyebrow">Marge brute</div><div class="kpi-value">' + fmtMoney(margeBdC) + '</div><div class="kpi-sub">' + margePct.toFixed(1) + ' % marge</div></div>' +
+                '<div class="kpi"><div class="kpi-eyebrow">Ratio €/m²</div><div class="kpi-value">' + ratioBdC.toFixed(2) + '</div><div class="kpi-sub">' + fmtNum(surfBdC) + ' m²</div></div>' +
+                '<div class="kpi"><div class="kpi-eyebrow">Perdus + Annulés</div><div class="kpi-value">' + fmtMoney(caPerdu + caAnnule) + '</div><div class="kpi-sub">' + (nPerdu + nAnnule) + ' devis</div></div>' +
+                '<div class="kpi"><div class="kpi-eyebrow">Backlog</div><div class="kpi-value">' + fmtMoney(caBacklog) + '</div><div class="kpi-sub">' + nBacklog + ' devis en cours</div></div>';
+        }
+
+        // ---- ÉVOLUTION CA + MARGE MENSUELLE ----
+        // Utilise les buckets de la fenêtre pour aligner
+        const labels = bdcBuckets.map(b => b.label);
+        const caSeries = bdcBuckets.map(b => sumCa(b.rows));
+        const margePctSeries = bdcBuckets.map(b => {
+            const c = sumCa(b.rows), m = sumMarge(b.rows);
+            return c > 0 ? m / c * 100 : null;
+        });
+        const canvasEvol = document.getElementById('acChartEvolution');
+        if (canvasEvol) {
+            if (_acChartEvolution) { _acChartEvolution.destroy(); _acChartEvolution = null; }
+            _acChartEvolution = new Chart(canvasEvol.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { type: 'bar', label: 'CA HT', data: caSeries, backgroundColor: 'rgba(21,78,128,0.55)', borderColor: '#154E80', borderWidth: 1, yAxisID: 'y' },
+                        { type: 'line', label: 'Marge %', data: margePctSeries, borderColor: '#A32D2D', backgroundColor: 'rgba(163,45,45,0.08)', borderWidth: 2, pointRadius: 3, tension: 0.25, yAxisID: 'y1', fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+                    scales: {
+                        y:  { position: 'left',  title: { display: true, text: 'CA HT (€)', font: { size: 10 } }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, callback: v => (v/1000).toFixed(0) + ' k€' } },
+                        y1: { position: 'right', title: { display: true, text: 'Marge %', font: { size: 10 } }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, callback: v => v.toFixed(0) + '%' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        }
+
+        // ---- RATIO €/m² PAR SOUS-CAT VS SOCIÉTÉ ----
+        const ratioTable = document.getElementById('acRatioTable');
+        if (ratioTable) {
+            let html = '<table class="matrix" style="width:100%;"><thead><tr><th>Sous-catégorie</th><th class="num">CA HT</th><th class="num">€/m² client</th><th class="num">€/m² société</th><th class="num">Écart</th></tr></thead><tbody>';
+            const socRowsBdC = ROWS_MASTER.filter(r => r.soc === soc && (r.status || 'bdc') === 'bdc');
+            const { buckets: socBuckets } = resolveWindow(socRowsBdC, win);
+            const socInWin = socBuckets.flatMap(b => b.rows);
+            let hasContent = false;
+            for (const sub of PONDERABLE_SUBCATS) {
+                const clRows = bdcInWin.filter(r => r.subcat === sub);
+                if (clRows.length === 0) continue;
+                hasContent = true;
+                const clCa = sumCa(clRows), clSurf = sumSurf(clRows);
+                const clPx = clSurf > 0 ? clCa / clSurf : 0;
+                const scRows = socInWin.filter(r => r.subcat === sub);
+                const scCa = sumCa(scRows), scSurf = sumSurf(scRows);
+                const scPx = scSurf > 0 ? scCa / scSurf : 0;
+                const ecart = scPx > 0 ? (clPx - scPx) / scPx * 100 : null;
+                const ecartColor = ecart == null ? 'var(--ink-3)' : (ecart >= 0 ? '#4F7B27' : '#A32D2D');
+                const ecartTxt = ecart == null ? '—' : (ecart >= 0 ? '+' : '') + ecart.toFixed(1) + '%';
+                const pillCls = sub.startsWith('Prest')?'prest':(sub.startsWith('Fourn')?'fourn':'other');
+                html += '<tr><td><span class="pill ' + pillCls + '" style="font-size:10px;">' + sub + '</span></td><td class="num">' + fmtMoney(clCa) + '</td><td class="num">' + clPx.toFixed(2) + ' €</td><td class="num" style="color:var(--ink-3);">' + scPx.toFixed(2) + ' €</td><td class="num" style="color:' + ecartColor + ';font-weight:600;">' + ecartTxt + '</td></tr>';
+            }
+            html += '</tbody></table>';
+            if (!hasContent) html = '<div style="padding:20px;text-align:center;color:var(--ink-3);font-family:var(--font-mono);font-size:12px;">Aucune donnée BdC sur la fenêtre.</div>';
+            ratioTable.innerHTML = html;
+        }
+
+        // ---- MARGE BRUTE PAR SOUS-CAT ----
+        const margeTable = document.getElementById('acMargeTable');
+        if (margeTable) {
+            let html = '<table class="matrix" style="width:100%;"><thead><tr><th>Sous-catégorie</th><th class="num">CA HT</th><th class="num">Marge brute</th><th class="num">Marge %</th></tr></thead><tbody>';
+            let hasContent = false;
+            for (const sub of PONDERABLE_SUBCATS) {
+                const clRows = bdcInWin.filter(r => r.subcat === sub);
+                if (clRows.length === 0) continue;
+                hasContent = true;
+                const clCa = sumCa(clRows), clMarge = sumMarge(clRows);
+                const clPct = clCa > 0 ? clMarge / clCa * 100 : 0;
+                const pctColor = clPct >= 78 ? '#4F7B27' : (clPct >= 60 ? '#5E5C58' : '#A32D2D');
+                const pillCls = sub.startsWith('Prest')?'prest':(sub.startsWith('Fourn')?'fourn':'other');
+                html += '<tr><td><span class="pill ' + pillCls + '" style="font-size:10px;">' + sub + '</span></td><td class="num">' + fmtMoney(clCa) + '</td><td class="num">' + fmtMoney(clMarge) + '</td><td class="num" style="color:' + pctColor + ';font-weight:600;">' + clPct.toFixed(1) + '%</td></tr>';
+            }
+            html += '</tbody></table>';
+            if (!hasContent) html = '<div style="padding:20px;text-align:center;color:var(--ink-3);font-family:var(--font-mono);font-size:12px;">Aucune donnée BdC sur la fenêtre.</div>';
+            margeTable.innerHTML = html;
+        }
+
+        // ---- BACKLOG ----
+        const backlogTable = document.getElementById('acBacklogTable');
+        if (backlogTable) {
+            if (backlogRows.length === 0) {
+                backlogTable.innerHTML = '<div style="padding:20px;text-align:center;color:var(--ink-3);font-family:var(--font-mono);font-size:12px;">Aucun devis en cours détecté.<br><span style="font-size:10px;">Les statuts détectés dans l\'export : bon de commande, Annulé. Un statut « en attente / en cours » Odoo activera cette section.</span></div>';
+            } else {
+                // Agréger par mois pour vue synthétique
+                const bySub = {};
+                for (const r of backlogRows) {
+                    const k = r.subcat;
+                    if (!bySub[k]) bySub[k] = { n: 0, ca: 0, marge: 0 };
+                    bySub[k].n += r.n; bySub[k].ca += r.ca; bySub[k].marge += r.marge;
+                }
+                let html = '<table class="matrix" style="width:100%;"><thead><tr><th>Sous-catégorie</th><th class="num">Nb</th><th class="num">CA potentiel</th><th class="num">Marge potentielle</th></tr></thead><tbody>';
+                for (const [sub, v] of Object.entries(bySub).sort((a,b) => b[1].ca - a[1].ca)) {
+                    const pct = v.ca > 0 ? v.marge/v.ca*100 : 0;
+                    html += '<tr><td>' + sub + '</td><td class="num">' + v.n + '</td><td class="num">' + fmtMoney(v.ca) + '</td><td class="num">' + fmtMoney(v.marge) + ' (' + pct.toFixed(0) + '%)</td></tr>';
+                }
+                html += '</tbody></table>';
+                backlogTable.innerHTML = html;
+            }
+        }
+
+        // ---- PERDUS + ANNULÉS ----
+        const perdusTable = document.getElementById('acPerdusTable');
+        if (perdusTable) {
+            const perdusAnnules = [...perduRows, ...annuleRows];
+            if (perdusAnnules.length === 0) {
+                perdusTable.innerHTML = '<div style="padding:20px;text-align:center;color:var(--ink-3);font-family:var(--font-mono);font-size:12px;">Aucun devis perdu ou annulé sur ce client.</div>';
+            } else {
+                // Agréger par statut × sous-cat
+                const rows = [];
+                for (const stKey of ['annule', 'perdu']) {
+                    const src = stKey === 'annule' ? annuleRows : perduRows;
+                    if (src.length === 0) continue;
+                    const bySub = {};
+                    for (const r of src) {
+                        if (!bySub[r.subcat]) bySub[r.subcat] = { n: 0, ca: 0 };
+                        bySub[r.subcat].n += r.n; bySub[r.subcat].ca += r.ca;
+                    }
+                    for (const [sub, v] of Object.entries(bySub)) rows.push({ statut: stKey, sub, n: v.n, ca: v.ca });
+                }
+                rows.sort((a, b) => b.ca - a.ca);
+                let html = '<table class="matrix" style="width:100%;"><thead><tr><th>Statut</th><th>Sous-catégorie</th><th class="num">Nb</th><th class="num">CA potentiel perdu</th></tr></thead><tbody>';
+                for (const r of rows) {
+                    const stLbl = r.statut === 'annule' ? '<span style="color:#BA7517;font-weight:600;">Annulé</span>' : '<span style="color:#A32D2D;font-weight:600;">Perdu</span>';
+                    html += '<tr><td>' + stLbl + '</td><td>' + r.sub + '</td><td class="num">' + r.n + '</td><td class="num">' + fmtMoney(r.ca) + '</td></tr>';
+                }
+                const totCa = perdusAnnules.reduce((s,r) => s + r.ca, 0);
+                const totN = perdusAnnules.reduce((s,r) => s + r.n, 0);
+                html += '</tbody><tfoot><tr><td colspan="2"><strong>TOTAL</strong></td><td class="num"><strong>' + totN + '</strong></td><td class="num"><strong>' + fmtMoney(totCa) + '</strong></td></tr></tfoot></table>';
+                perdusTable.innerHTML = html;
+            }
+        }
+    } catch (e) {
+        console.error('[renderAnalyseClient]', e);
+    }
+}
+
 // Ancienne fonction gardée pour compat éventuelle
 function renderWatchClients(soc, tabKey, modeToggleId) {
     const win = state.window[tabKey];
@@ -4340,7 +4655,7 @@ function switchTab(tab) {
     const socToggle = document.getElementById('socFilter');
     const socLabel = socToggle?.previousElementSibling;
     if (socToggle) {
-        const hideSocFilter = (tab === 'suivi' || tab === 'compare' || tab === 'admin' || tab === 'margeproduit' || tab === 'suivimarge');
+        const hideSocFilter = (tab === 'suivi' || tab === 'compare' || tab === 'admin' || tab === 'margeproduit' || tab === 'suivimarge' || tab === 'analyseclient');
         socToggle.style.display = hideSocFilter ? 'none' : '';
         if (socLabel && socLabel.classList.contains('controls-label')) {
             socLabel.style.display = hideSocFilter ? 'none' : '';
@@ -4378,6 +4693,7 @@ function switchTab(tab) {
     else if (tab === 'watch') renderWatchUnified();
     else if (tab === 'margeproduit') renderTab7();
     else if (tab === 'suivimarge') renderTab8();
+    else if (tab === 'analyseclient') { initAcClientSelector(); renderAnalyseClient(); }
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
 
@@ -4645,6 +4961,7 @@ initWindowSelector('compare');
 initWindowSelector('watch');
 initWindowSelector('margeproduit');
 initWindowSelector('suivimarge');
+initWindowSelector('analyseclient');
 
 // V10.20 : Handlers onglet unifié Clients à surveiller
 document.getElementById('watchModeToggle')?.querySelectorAll('.type-btn').forEach(btn => {
@@ -5902,7 +6219,7 @@ function onFirestoreStateSnapshot(doc) {
     if (typeof fillEmptyHistoricalFromOdoo === 'function') fillEmptyHistoricalFromOdoo();
     // Ré-init sélecteurs et re-render
     initWindowSelector('global'); initWindowSelector('suivi'); initWindowSelector('clients');
-    initWindowSelector('compare'); initWindowSelector('watch'); initWindowSelector('margeproduit'); initWindowSelector('suivimarge');
+    initWindowSelector('compare'); initWindowSelector('watch'); initWindowSelector('margeproduit'); initWindowSelector('suivimarge'); initWindowSelector('analyseclient');
     switchTab(state.tab || 'global');
 }
 
