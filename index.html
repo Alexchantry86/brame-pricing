@@ -419,6 +419,53 @@ footer.note strong { color: var(--ink); font-weight: 500; }
 .window-selector select.ws-value:hover { border-color: var(--ink); }
 .window-selector select.ws-value:focus { outline: none; border-color: var(--ink); }
 
+/* V10.28 · Dropdown multi-select clients (onglet Analyse client) */
+.ac-multi { position: relative; display: inline-block; }
+.ac-multi-trigger {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
+    padding: 8px 32px 8px 12px; font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+    color: var(--ink); cursor: pointer; min-width: 280px; text-align: left;
+    display: inline-flex; align-items: center; justify-content: space-between; gap: 8px;
+    transition: border-color 0.15s;
+}
+.ac-multi-trigger:hover { border-color: var(--ink); }
+.ac-multi-trigger.active { border-color: var(--ink); background: rgba(26,25,22,0.03); }
+.ac-multi-trigger svg { width: 12px; height: 12px; color: var(--ink-3); flex-shrink: 0; }
+.ac-multi-panel {
+    position: absolute; top: calc(100% + 4px); left: 0; z-index: 500;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
+    width: 360px; max-height: 460px; overflow: hidden;
+    box-shadow: 0 8px 24px rgba(26,25,22,0.12);
+    padding: 8px; display: none; flex-direction: column;
+}
+.ac-multi-panel.open { display: flex; }
+.ac-multi-search {
+    width: 100%; padding: 7px 10px; margin-bottom: 6px;
+    border: 1px solid var(--rule); border-radius: 3px;
+    font-family: var(--font-sans); font-size: 12px; background: var(--bg); color: var(--ink);
+    box-sizing: border-box;
+}
+.ac-multi-search:focus { outline: none; border-color: var(--ink); background: var(--panel); }
+.ac-multi-actions { display: flex; gap: 4px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+.ac-multi-actions button {
+    flex: 1; background: var(--bg); border: 1px solid var(--rule); border-radius: 3px;
+    padding: 5px 8px; font-family: var(--font-mono); font-size: 10px; cursor: pointer;
+    color: var(--ink-2); letter-spacing: 0.5px; text-transform: uppercase;
+    transition: all 0.1s;
+}
+.ac-multi-actions button:hover { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.ac-multi-list { overflow-y: auto; max-height: 340px; }
+.ac-multi-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer;
+    font-family: var(--font-sans); font-size: 12px; color: var(--ink-2); border-radius: 3px;
+    transition: background 0.08s;
+}
+.ac-multi-item:hover { background: var(--bg); color: var(--ink); }
+.ac-multi-item.selected { background: rgba(26,25,22,0.04); color: var(--ink); font-weight: 500; }
+.ac-multi-item input { margin: 0; cursor: pointer; }
+.ac-multi-item .ac-multi-ca { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); }
+.ac-multi-empty { padding: 12px 8px; text-align: center; color: var(--ink-3); font-family: var(--font-mono); font-size: 11px; }
+
 /* Dropdown multi-select période (V10.19) */
 .window-selector .ws-multi { position: relative; display: none; }
 .window-selector .ws-multi.visible { display: inline-block; }
@@ -520,7 +567,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.27 · ANALYSE CLIENT 360° · 22 SEPT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.28 · ANALYSE CLIENT MULTI · 22 SEPT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -1318,10 +1365,20 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
 <!-- ============================================================ -->
 <div class="tab-panel" data-tab="analyseclient">
     <div class="controls-row" style="flex-wrap:wrap;gap:14px;align-items:center;">
-        <span class="controls-label">Client</span>
-        <select id="acClientSelect" style="min-width:280px; padding:8px 12px; font-family:var(--font-sans); font-size:13px; border:1px solid var(--rule); border-radius:4px; background:var(--panel);">
-            <option value="">— Sélectionne un client —</option>
-        </select>
+        <span class="controls-label">Client(s)</span>
+        <div class="ac-multi" id="acClientMulti">
+            <button class="ac-multi-trigger" type="button">
+                <span class="ac-multi-label" id="acClientMultiLabel">Aucun client sélectionné</span>
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5L6 7.5L9 4.5"/></svg>
+            </button>
+            <div class="ac-multi-panel" id="acClientMultiPanel">
+                <input type="text" class="ac-multi-search" id="acClientMultiSearch" placeholder="Rechercher un client…" autocomplete="off">
+                <div class="ac-multi-actions">
+                    <button type="button" data-action="none">Tout effacer</button>
+                </div>
+                <div class="ac-multi-list" id="acClientMultiList"></div>
+            </div>
+        </div>
         <span class="controls-label" style="margin-left:12px;">Fenêtre d'analyse</span>
         <div class="window-selector" data-tab="analyseclient">
             <div class="type-toggle">
@@ -1992,7 +2049,7 @@ const state = {
         suivimarge: { type: 'historique', value: '12m' },
         analyseclient: { type: 'historique', value: '12m' }
     },
-    analyseClient: '',  // V10.27 · client sélectionné dans l'onglet Analyse client
+    analyseClients: [],  // V10.28 · liste des clients sélectionnés dans l'onglet Analyse client
     clientFilter: { global: [], suivi: [], clients: [], compare: [], watch: [], margeproduit: [], suivimarge: [] },
     minOf: { watch: 3 },
     axis: 'ratio',  // 'ratio' = écart €/m² · 'marge' = écart marge %
@@ -4322,40 +4379,137 @@ function renderWatchUnified() {
 // V10.27 · Onglet Analyse client — vue 360° d'un client
 let _acChartEvolution = null;
 
-function initAcClientSelector() {
-    // Peuple le select à partir de ROWS_MASTER (contient tous statuts confondus)
-    // Trie par CA décroissant (tous statuts, pour ne pas oublier les clients qui n'ont que des perdus)
+// V10.28 · liste ordonnée des clients (par CA décroissant, tous statuts)
+let _acClientList = [];
+
+function initAcClientMulti() {
     try {
-        const sel = document.getElementById('acClientSelect');
-        if (!sel) return;
+        // Reconstruire la liste triée à partir de ROWS_MASTER (tous statuts)
         const caByClient = {};
         for (const r of ROWS_MASTER) {
             if (!r.client || r.client === '—') continue;
             caByClient[r.client] = (caByClient[r.client] || 0) + (r.ca || 0);
         }
-        const sorted = Object.entries(caByClient)
+        _acClientList = Object.entries(caByClient)
             .sort((a, b) => b[1] - a[1])
-            .map(([c, ca]) => c);
-        const current = state.analyseClient;
-        sel.innerHTML = '<option value="">— Sélectionne un client —</option>' +
-            sorted.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '"' + (c === current ? ' selected' : '') + '>' + c + '</option>').join('');
-        if (!sel.dataset.bound) {
-            sel.dataset.bound = '1';
-            sel.addEventListener('change', () => {
-                state.analyseClient = sel.value;
+            .map(([c, ca]) => ({ client: c, ca: ca }));
+
+        renderAcClientList('');
+        updateAcClientLabel();
+
+        // Bindings (idempotents)
+        const trigger = document.querySelector('#acClientMulti .ac-multi-trigger');
+        const panel = document.getElementById('acClientMultiPanel');
+        const search = document.getElementById('acClientMultiSearch');
+        const noneBtn = document.querySelector('#acClientMultiPanel [data-action="none"]');
+
+        if (trigger && !trigger.dataset.bound) {
+            trigger.dataset.bound = '1';
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Fermer les autres dropdowns multi ouverts
+                document.querySelectorAll('.ws-multi-panel.open').forEach(p => p.classList.remove('open'));
+                document.querySelectorAll('.ac-multi-panel.open').forEach(p => { if (p !== panel) p.classList.remove('open'); });
+                panel.classList.toggle('open');
+                if (panel.classList.contains('open') && search) search.focus();
+            });
+        }
+        if (panel && !panel.dataset.bound) {
+            panel.dataset.bound = '1';
+            panel.addEventListener('click', e => e.stopPropagation());
+        }
+        if (search && !search.dataset.bound) {
+            search.dataset.bound = '1';
+            search.addEventListener('input', () => renderAcClientList(search.value || ''));
+        }
+        if (noneBtn && !noneBtn.dataset.bound) {
+            noneBtn.dataset.bound = '1';
+            noneBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                state.analyseClients = [];
+                renderAcClientList(search ? search.value : '');
+                updateAcClientLabel();
                 renderAnalyseClient();
             });
         }
-    } catch (e) { console.error('[initAcClientSelector]', e); }
+    } catch (e) { console.error('[initAcClientMulti]', e); }
+}
+
+function renderAcClientList(filterText) {
+    try {
+        const list = document.getElementById('acClientMultiList');
+        if (!list) return;
+        const ft = (filterText || '').toLowerCase().trim();
+        const filtered = ft ? _acClientList.filter(c => c.client.toLowerCase().includes(ft)) : _acClientList;
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="ac-multi-empty">Aucun client correspondant</div>';
+            return;
+        }
+        const selected = new Set(state.analyseClients || []);
+        const shown = filtered.slice(0, 250);
+        list.innerHTML = shown.map(c => {
+            const isSel = selected.has(c.client);
+            const caStr = c.ca >= 1000 ? (c.ca / 1000).toFixed(0) + ' k€' : Math.round(c.ca) + ' €';
+            return '<label class="ac-multi-item' + (isSel ? ' selected' : '') + '">' +
+                '<input type="checkbox" data-client="' + c.client.replace(/"/g, '&quot;') + '"' + (isSel ? ' checked' : '') + '>' +
+                '<span>' + c.client + '</span>' +
+                '<span class="ac-multi-ca">' + caStr + '</span>' +
+                '</label>';
+        }).join('');
+        if (filtered.length > 250) list.innerHTML += '<div class="ac-multi-empty">+ ' + (filtered.length - 250) + ' autres (affine la recherche)</div>';
+        list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const c = cb.dataset.client;
+                const arr = Array.isArray(state.analyseClients) ? [...state.analyseClients] : [];
+                if (cb.checked) { if (!arr.includes(c)) arr.push(c); }
+                else { const i = arr.indexOf(c); if (i >= 0) arr.splice(i, 1); }
+                state.analyseClients = arr;
+                cb.closest('.ac-multi-item').classList.toggle('selected', cb.checked);
+                updateAcClientLabel();
+                renderAnalyseClient();
+            });
+        });
+    } catch (e) { console.error('[renderAcClientList]', e); }
+}
+
+function updateAcClientLabel() {
+    try {
+        const label = document.getElementById('acClientMultiLabel');
+        const trigger = document.querySelector('#acClientMulti .ac-multi-trigger');
+        if (!label) return;
+        const arr = Array.isArray(state.analyseClients) ? state.analyseClients : [];
+        if (arr.length === 0) {
+            label.textContent = 'Aucun client sélectionné';
+            if (trigger) trigger.classList.remove('active');
+        } else if (arr.length === 1) {
+            label.textContent = arr[0];
+            if (trigger) trigger.classList.add('active');
+        } else {
+            label.textContent = arr.length + ' clients sélectionnés';
+            if (trigger) trigger.classList.add('active');
+        }
+    } catch (e) { console.error('[updateAcClientLabel]', e); }
+}
+
+// Fermeture au clic-outside et Échap (une seule fois)
+if (!window._acMultiGlobalHandlers) {
+    window._acMultiGlobalHandlers = true;
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.ac-multi-panel.open').forEach(p => p.classList.remove('open'));
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') document.querySelectorAll('.ac-multi-panel.open').forEach(p => p.classList.remove('open'));
+    });
 }
 
 function renderAnalyseClient() {
     try {
-        const client = state.analyseClient;
+        // V10.28 · Support multi-clients : state.analyseClients est un array
+        const clients = Array.isArray(state.analyseClients) ? state.analyseClients : [];
         const empty = document.getElementById('acEmpty');
         const content = document.getElementById('acContent');
-        if (!client) {
-            if (empty) empty.style.display = '';
+        if (clients.length === 0) {
+            if (empty) { empty.style.display = ''; empty.textContent = 'Sélectionne un ou plusieurs clients pour afficher l\'analyse.'; }
             if (content) content.style.display = 'none';
             return;
         }
@@ -4363,8 +4517,9 @@ function renderAnalyseClient() {
         if (content) content.style.display = '';
 
         const win = state.window.analyseclient || { type: 'historique', value: '12m' };
-        // Toutes les rows du client tous statuts confondus
-        const allRows = ROWS_MASTER.filter(r => r.client === client);
+        // Union des rows des clients sélectionnés, tous statuts confondus
+        const clientSet = new Set(clients);
+        const allRows = ROWS_MASTER.filter(r => clientSet.has(r.client));
         const bdcRows = allRows.filter(r => (r.status || 'bdc') === 'bdc');
         const annuleRows = allRows.filter(r => r.status === 'annule');
         const perduRows = allRows.filter(r => r.status === 'perdu');
@@ -4374,10 +4529,13 @@ function renderAnalyseClient() {
             return s !== 'bdc' && s !== 'annule' && s !== 'perdu';
         });
 
-        // Société majoritaire du client
+        // Société majoritaire (agrégée sur les clients sélectionnés)
         const socCa = {};
         for (const r of allRows) socCa[r.soc] = (socCa[r.soc] || 0) + r.ca;
-        const soc = Object.entries(socCa).sort((a,b) => b[1] - a[1])[0]?.[0] || "CAP'EMBAL";
+        const socEntries = Object.entries(socCa).sort((a,b) => b[1] - a[1]);
+        const soc = socEntries[0]?.[0] || "CAP'EMBAL";
+        // Étiquette société pour KPI : nom si mono-société, sinon "N sociétés"
+        const socLabel = socEntries.length === 1 ? soc : (socEntries.length + ' sociétés');
 
         // Rows BdC dans la fenêtre pour analyses marge/prix
         const { buckets: bdcBuckets, hint: winHint } = resolveWindow(bdcRows, win);
@@ -4399,8 +4557,9 @@ function renderAnalyseClient() {
 
         const kpisEl = document.getElementById('acKpisTop');
         if (kpisEl) {
+            const clientsKpi = '<div class="kpi"><div class="kpi-eyebrow">Périmètre</div><div class="kpi-value" style="font-size:16px;">' + clients.length + ' client' + (clients.length > 1 ? 's' : '') + '</div><div class="kpi-sub">' + socLabel + ' · ' + winHint + '</div></div>';
             kpisEl.innerHTML =
-                '<div class="kpi"><div class="kpi-eyebrow">Société</div><div class="kpi-value" style="font-size:16px;">' + soc + '</div><div class="kpi-sub">' + winHint + '</div></div>' +
+                clientsKpi +
                 '<div class="kpi"><div class="kpi-eyebrow">CA HT (BdC)</div><div class="kpi-value">' + fmtMoney(caBdC) + '</div><div class="kpi-sub">' + nOF + ' OF</div></div>' +
                 '<div class="kpi"><div class="kpi-eyebrow">Marge brute</div><div class="kpi-value">' + fmtMoney(margeBdC) + '</div><div class="kpi-sub">' + margePct.toFixed(1) + ' % marge</div></div>' +
                 '<div class="kpi"><div class="kpi-eyebrow">Ratio €/m²</div><div class="kpi-value">' + ratioBdC.toFixed(2) + '</div><div class="kpi-sub">' + fmtNum(surfBdC) + ' m²</div></div>' +
@@ -4443,7 +4602,9 @@ function renderAnalyseClient() {
         const ratioTable = document.getElementById('acRatioTable');
         if (ratioTable) {
             let html = '<table class="matrix" style="width:100%;"><thead><tr><th>Sous-catégorie</th><th class="num">CA HT</th><th class="num">€/m² client</th><th class="num">€/m² société</th><th class="num">Écart</th></tr></thead><tbody>';
-            const socRowsBdC = ROWS_MASTER.filter(r => r.soc === soc && (r.status || 'bdc') === 'bdc');
+            // V10.28 · comparaison société = union des sociétés des clients sélectionnés
+            const socsInScope = new Set(socEntries.map(e => e[0]));
+            const socRowsBdC = ROWS_MASTER.filter(r => socsInScope.has(r.soc) && (r.status || 'bdc') === 'bdc');
             const { buckets: socBuckets } = resolveWindow(socRowsBdC, win);
             const socInWin = socBuckets.flatMap(b => b.rows);
             let hasContent = false;
@@ -4693,7 +4854,7 @@ function switchTab(tab) {
     else if (tab === 'watch') renderWatchUnified();
     else if (tab === 'margeproduit') renderTab7();
     else if (tab === 'suivimarge') renderTab8();
-    else if (tab === 'analyseclient') { initAcClientSelector(); renderAnalyseClient(); }
+    else if (tab === 'analyseclient') { initAcClientMulti(); renderAnalyseClient(); }
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
 
