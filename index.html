@@ -567,7 +567,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.28 · ANALYSE CLIENT MULTI · 22 SEPT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.31 · BADGES UNITÉ + EXCLUSION AVOIRS · 23 SEPT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -2669,7 +2669,7 @@ function renderTab1() {
                 ? '<td class="num" style="color:var(--ink-3);">—</td>'
                 : `<td class="num" style="color:${ecart>0?'#4F7B27':ecart<0?'#BA7517':'#92908A'};font-weight:600;">${ecart>=0?'+':''}${ecart.toFixed(1)}%</td>`;
             return `<tr>
-                <td><span class="pill ${pillCls}">${sub}</span></td>
+                <td><span class="pill ${pillCls}">${sub}</span>${unitBadge(sub)}</td>
                 <td>${m.group}</td>
                 <td class="num">${sumN(rSub)}</td>
                 <td class="num">${fmtMoney(ca)}</td>
@@ -2729,7 +2729,7 @@ function showDrilldown(soc, suffix, bucketLabel, detail) {
         const num = (c.px != null && c.pxDenom > 0) ? c.px * c.w : null;
         const den = (c.px != null && c.pxDenom > 0) ? c.pxDenom * c.w : null;
         return `<tr>
-            <td><span class="pill ${pillCls}">${c.sub}</span></td>
+            <td><span class="pill ${pillCls}">${c.sub}</span>${unitBadge(c.sub)}</td>
             <td class="num">${(c.w*100).toFixed(1)}%</td>
             <td class="num">${pxStr}</td>
             <td class="num">${c.pxDenom.toFixed(2)} €</td>
@@ -2796,7 +2796,7 @@ function renderHistoricalPrices(soc, tableId, selectId) {
     const bodyRows = PONDERABLE_SUBCATS.map(sub => {
         const m = META[sub] || {group: '—'};
         const pillCls = sub.startsWith('Prest')?'prest':(sub.startsWith('Fourn')?'fourn':'other');
-        const cells = [`<td><span class="pill ${pillCls}">${sub}</span></td>`];
+        const cells = [`<td><span class="pill ${pillCls}">${sub}</span>${unitBadge(sub)}</td>`];
         HISTORY_YEARS.forEach(y => {
             const isCurrentYr = y === currentYear;
             let val;
@@ -2912,7 +2912,7 @@ function renderParams() {
                 ? '<td class="num" style="color:var(--ink-3);">—</td>'
                 : `<td class="num" style="color:${ecart>0?'#4F7B27':ecart<0?'#BA7517':'#92908A'};font-weight:600;">${ecart>=0?'+':''}${ecart.toFixed(1)}%</td>`;
             return `<tr>
-                <td><span class="pill ${pillCls}">${sub}</span></td>
+                <td><span class="pill ${pillCls}">${sub}</span>${unitBadge(sub)}</td>
                 <td>${m.group}</td>
                 <td class="num"><input class="param-input" type="number" step="0.1" min="0" max="100" data-soc="${soc}" data-cat="${sub}" data-field="weight" value="${(w*100).toFixed(1)}" style="width:70px;text-align:right;padding:4px 6px;border:1px solid var(--rule);border-radius:3px;font-family:var(--font-mono);font-size:11px;background:var(--bg);"><span style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-left:3px;">%</span></td>
                 <td class="num"><input class="param-input" type="number" step="0.5" min="0" data-soc="${soc}" data-cat="${sub}" data-field="ref" value="${pxRef.toFixed(2)}" style="width:76px;text-align:right;padding:4px 6px;border:1px solid var(--rule);border-radius:3px;font-family:var(--font-mono);font-size:11px;background:var(--bg);"><span style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-left:3px;">€</span></td>
@@ -3026,7 +3026,7 @@ function renderHistoricalPrices() {
                     ${marker}
                 </td>`;
             }).join('');
-            return `<tr><td><span class="pill ${pillCls}">${sub}</span></td>${cells}</tr>`;
+            return `<tr><td><span class="pill ${pillCls}">${sub}</span>${unitBadge(sub)}</td>${cells}</tr>`;
         }).join('');
 
         // Bind inputs (uniquement les non-disabled — année en cours ignorée)
@@ -3333,7 +3333,7 @@ function renderTab2() {
                 ? '<td class="num" style="background:rgba(163,45,45,0.06);color:var(--ink-3);">—</td>'
                 : `<td class="num" style="background:rgba(163,45,45,0.06);color:${ecart>0?'#4F7B27':ecart<0?'#BA7517':'#92908A'};font-weight:600;">${ecart>=0?'+':''}${ecart.toFixed(1)}%</td>`;
             return `<tr>
-                <td><span class="pill ${pillCls}">${sub}</span></td>
+                <td><span class="pill ${pillCls}">${sub}</span>${unitBadge(sub)}</td>
                 <td>${m.group}</td>
                 <td class="num">${sumN(rAll)}</td>
                 <td class="num">${fmtNum(sumSurf(rAll))}</td>
@@ -3686,7 +3686,7 @@ function renderTab4() {
         const capPondPct = capTotalCa > 0 ? (r.capCa / capTotalCa * 100).toFixed(1) : '0';
         return `<tr>
             <td>${r.meta.group}</td>
-            <td><span class="pill ${r.sub.startsWith('Prest')?'prest':(r.sub.startsWith('Fourn')?'fourn':'other')}">${r.sub}</span></td>
+            <td><span class="pill ${r.sub.startsWith('Prest')?'prest':(r.sub.startsWith('Fourn')?'fourn':'other')}">${r.sub}</span>${unitBadge(r.sub)}</td>
             <td>${r.meta.protection}</td>
             <td class="num block-start">${r.legN}</td>
             <td class="num">${r.capN}</td>
@@ -4225,7 +4225,7 @@ function renderTab8() {
                 ? '<td class="num" style="background:rgba(163,45,45,0.06);color:var(--ink-3);">—</td>'
                 : `<td class="num" style="background:rgba(163,45,45,0.06);color:${ecart>=0?'#4F7B27':'#A32D2D'};font-weight:500;">${ecart>=0?'+':''}${ecart.toFixed(1)} pts</td>`;
             return `<tr>
-                <td><span class="pill ${pillCls}">${sub}</span></td>
+                <td><span class="pill ${pillCls}">${sub}</span>${unitBadge(sub)}</td>
                 <td>${m.group}</td>
                 <td class="num">${sumN(rAll)}</td>
                 <td class="num">${fmtNum(sumSurf(rAll))}</td>
@@ -4601,7 +4601,7 @@ function renderAnalyseClient() {
         // ---- RATIO €/m² PAR SOUS-CAT VS SOCIÉTÉ ----
         const ratioTable = document.getElementById('acRatioTable');
         if (ratioTable) {
-            let html = '<table class="matrix" style="width:100%;"><thead><tr><th>Sous-catégorie</th><th class="num">CA HT</th><th class="num">€/m² client</th><th class="num">€/m² société</th><th class="num">Écart</th></tr></thead><tbody>';
+            let html = '<table class="matrix" style="width:100%;"><thead><tr><th>Sous-catégorie</th><th class="num">CA HT</th><th class="num">€/unité client</th><th class="num">€/unité société</th><th class="num">Écart</th></tr></thead><tbody>';
             // V10.28 · comparaison société = union des sociétés des clients sélectionnés
             const socsInScope = new Set(socEntries.map(e => e[0]));
             const socRowsBdC = ROWS_MASTER.filter(r => socsInScope.has(r.soc) && (r.status || 'bdc') === 'bdc');
@@ -4621,7 +4621,8 @@ function renderAnalyseClient() {
                 const ecartColor = ecart == null ? 'var(--ink-3)' : (ecart >= 0 ? '#4F7B27' : '#A32D2D');
                 const ecartTxt = ecart == null ? '—' : (ecart >= 0 ? '+' : '') + ecart.toFixed(1) + '%';
                 const pillCls = sub.startsWith('Prest')?'prest':(sub.startsWith('Fourn')?'fourn':'other');
-                html += '<tr><td><span class="pill ' + pillCls + '" style="font-size:10px;">' + sub + '</span></td><td class="num">' + fmtMoney(clCa) + '</td><td class="num">' + clPx.toFixed(2) + ' €</td><td class="num" style="color:var(--ink-3);">' + scPx.toFixed(2) + ' €</td><td class="num" style="color:' + ecartColor + ';font-weight:600;">' + ecartTxt + '</td></tr>';
+                const badge = unitBadge(sub);
+                html += '<tr><td><span class="pill ' + pillCls + '" style="font-size:10px;">' + sub + '</span>' + badge + '</td><td class="num">' + fmtMoney(clCa) + '</td><td class="num">' + clPx.toFixed(2) + ' €</td><td class="num" style="color:var(--ink-3);">' + scPx.toFixed(2) + ' €</td><td class="num" style="color:' + ecartColor + ';font-weight:600;">' + ecartTxt + '</td></tr>';
             }
             html += '</tbody></table>';
             if (!hasContent) html = '<div style="padding:20px;text-align:center;color:var(--ink-3);font-family:var(--font-mono);font-size:12px;">Aucune donnée BdC sur la fenêtre.</div>';
@@ -4641,7 +4642,8 @@ function renderAnalyseClient() {
                 const clPct = clCa > 0 ? clMarge / clCa * 100 : 0;
                 const pctColor = clPct >= 78 ? '#4F7B27' : (clPct >= 60 ? '#5E5C58' : '#A32D2D');
                 const pillCls = sub.startsWith('Prest')?'prest':(sub.startsWith('Fourn')?'fourn':'other');
-                html += '<tr><td><span class="pill ' + pillCls + '" style="font-size:10px;">' + sub + '</span></td><td class="num">' + fmtMoney(clCa) + '</td><td class="num">' + fmtMoney(clMarge) + '</td><td class="num" style="color:' + pctColor + ';font-weight:600;">' + clPct.toFixed(1) + '%</td></tr>';
+                const badgeM = unitBadge(sub);
+                html += '<tr><td><span class="pill ' + pillCls + '" style="font-size:10px;">' + sub + '</span>' + badgeM + '</td><td class="num">' + fmtMoney(clCa) + '</td><td class="num">' + fmtMoney(clMarge) + '</td><td class="num" style="color:' + pctColor + ';font-weight:600;">' + clPct.toFixed(1) + '%</td></tr>';
             }
             html += '</tbody></table>';
             if (!hasContent) html = '<div style="padding:20px;text-align:center;color:var(--ink-3);font-family:var(--font-mono);font-size:12px;">Aucune donnée BdC sur la fenêtre.</div>';
@@ -5588,6 +5590,30 @@ function categorizeSubcat(prod, prot) {
     return 'Autres';
 }
 
+// V10.31 · unité de mesure de la surface selon sous-catégorie
+// Retourne { unit, unitFull } où :
+//   - unit    = badge court (m² 6f · m² pl. · m³)
+//   - unitFull = libellé long pour tooltips/entêtes
+function unitForSubcat(subcat) {
+    const s = String(subcat || '');
+    if (s.indexOf('Berceau') >= 0)     return { unit: 'm³',      unitFull: 'm³ volume',       family: 'Berceau'  };
+    if (s.indexOf('Plateau') >= 0)     return { unit: 'm² pl.',  unitFull: 'm² plancher',     family: 'Plateau'  };
+    if (s === 'Autres')                return { unit: 'm²',      unitFull: 'm²',               family: 'Autre'    };
+    return { unit: 'm² 6f', unitFull: 'm² 6 faces exterieures', family: 'Caisse' };
+}
+function unitBadge(subcat) {
+    const u = unitForSubcat(subcat);
+    const bg = u.family === 'Berceau' ? 'rgba(75,45,110,0.10)'
+             : u.family === 'Plateau' ? 'rgba(186,117,23,0.12)'
+             : u.family === 'Caisse'  ? 'rgba(21,78,128,0.09)'
+             : 'rgba(146,144,138,0.15)';
+    const fg = u.family === 'Berceau' ? '#4B2D6E'
+             : u.family === 'Plateau' ? '#8A5510'
+             : u.family === 'Caisse'  ? '#154E80'
+             : '#5E5C58';
+    return '<span title="' + u.unitFull + '" style="display:inline-block; font-family:var(--font-mono); font-size:9.5px; padding:1px 6px; background:' + bg + '; color:' + fg + '; border-radius:3px; margin-left:6px; letter-spacing:0.3px;">' + u.unit + '</span>';
+}
+
 function excelDateToJSDate(v) {
     if (v == null || v === '') return null;
     if (v instanceof Date) return v;
@@ -5617,7 +5643,7 @@ function parseOdooExport(rawRows) {
     //   - v3 (août 2026) : `ENTREPRISE`, `Prix Total HT`, `Total m2`, `Total Marge brute`, `Quantité`
     //   - legacy         : `Prix unitaire total (HT)`, `m2 des 6 faces exterieures`, `Marge brute` unitaire
     const agg = new Map();
-    let nNoDate = 0, nCancelled = 0, nBerceau = 0;
+    let nNoDate = 0, nCancelled = 0, nBerceau = 0, nNegatif = 0;
     let maxDate = null;
     const firstRow = rawRows[0] || {};
     const hasV4 = ('Societe' in firstRow) && ('Prix Total' in firstRow) && ('Total m2/6 faces' in firstRow);
@@ -5680,11 +5706,23 @@ function parseOdooExport(rawRows) {
         // Contributions pondérées par la quantité
         let surfContrib, caContrib, margeContrib, coutContrib;
         if (format === 'v4') {
-            surfContrib  = parseFloat(r['Total m2/6 faces']) || 0;
+            // V10.30 · surface selon Type de conception :
+            //   - Caisse (défaut) → Total m2/6 faces (m² externes 6 faces)
+            //   - Plateau → Total m2 [plancher] (m² plancher)
+            //   - Berceau → Total m3 (m³ volume) — même champ `surf`, unité différente
+            if (conception === 'Plateau') {
+                surfContrib = parseFloat(r['Total m2 [plancher]']) || 0;
+            } else if (conception === 'Berceau') {
+                surfContrib = parseFloat(r['Total m3']) || 0;
+            } else {
+                surfContrib = parseFloat(r['Total m2/6 faces']) || 0;
+            }
             caContrib    = parseFloat(r['Prix Total']) || 0;
             // v4 : Marge brute est UNITAIRE → × qty pour avoir le total
             margeContrib = (parseFloat(r['Marge brute']) || 0) * qty;
             coutContrib  = caContrib - margeContrib;
+            // V10.31 · exclure les lignes à Prix Total < 0 (avoirs, erreurs de saisie)
+            if (caContrib < 0) { nNegatif++; continue; }
         } else if (format === 'v3') {
             surfContrib  = parseFloat(r['Total m2']) || 0;
             caContrib    = parseFloat(r['Prix Total HT']) || 0;
@@ -5714,7 +5752,7 @@ function parseOdooExport(rawRows) {
             dprev_h: Math.round(v.dprev_h*100)/100, dreel_h: Math.round(v.dreel_h*100)/100
         });
     }
-    console.log('[parseOdooExport] Format ' + format + ' · ' + rawRows.length + ' lignes brutes · ' + nCancelled + ' annulés (conservés, filtrables via UI) · ' + nBerceau + ' berceaux détectés · ' + totalQty + ' unités agrégées · ' + result.length + ' groupes · ' + nNoDate + ' sans date');
+    console.log('[parseOdooExport] Format ' + format + ' · ' + rawRows.length + ' lignes brutes · ' + nCancelled + ' annulés (conservés) · ' + nBerceau + ' berceaux · ' + nNegatif + ' Prix Total<0 exclus (avoirs) · ' + totalQty + ' unités agrégées · ' + result.length + ' groupes · ' + nNoDate + ' sans date');
     return { data: result, n_no_date: nNoDate, n_cancelled: nCancelled, n_berceau: nBerceau, max_date: maxDate };
 }
 
@@ -6306,12 +6344,48 @@ function scheduleFbSave(delay) {
     _fbSaveDebounce = setTimeout(() => saveStateToFirestore(), delay || 3000);
 }
 
+// V10.29 · Export state.json local (téléchargement navigateur) — pour partage manuel ou backup
+function exportStateJSON() {
+    try {
+        const rowsToDump = (typeof ROWS_MASTER !== 'undefined' && ROWS_MASTER.length > 0) ? ROWS_MASTER : ROWS;
+        const payload = {
+            version: 'v9',
+            exported_at: new Date().toISOString(),
+            exported_by: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : 'unknown',
+            gen_date: PAYLOAD.gen_date || null,
+            available_periods: PAYLOAD.available_periods || null,
+            subcat_meta: PAYLOAD.subcat_meta || null,
+            subcat_order: PAYLOAD.subcat_order || null,
+            n_pointed: PAYLOAD.n_pointed || null,
+            n_total: PAYLOAD.n_total || null,
+            params: state_params,
+            data: rowsToDump
+        };
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'state.json';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+        console.log('[exportStateJSON] state.json téléchargé · ' + rowsToDump.length + ' rows');
+        return true;
+    } catch(e) {
+        console.error('[exportStateJSON]', e);
+        alert('Erreur lors du téléchargement : ' + (e.message || e));
+        return false;
+    }
+}
+
 async function saveStateToFirestore() {
     if (!currentUser) return;
     fbSetSyncStatus('☁ Sync en cours…', 'progress');
     try {
         const nowMs = Date.now();
         _stateLastLocalSaveTs = nowMs;
+        // V10.29 · pousser ROWS_MASTER (source complète : tous statuts) et pas ROWS (filtré)
+        const rowsToPush = (typeof ROWS_MASTER !== 'undefined' && ROWS_MASTER.length > 0) ? ROWS_MASTER : ROWS;
         await _db.collection('state').doc('current').set({
             version: 'v9',
             saved_at: firebase.firestore.FieldValue.serverTimestamp(),
@@ -6325,7 +6399,7 @@ async function saveStateToFirestore() {
             n_pointed: PAYLOAD.n_pointed || null,
             n_total: PAYLOAD.n_total || null,
             params: state_params,
-            data: [...ROWS]
+            data: [...rowsToPush]
         });
         const dt = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         fbSetSyncStatus('☁ Synchronisé ' + dt, 'ok');
