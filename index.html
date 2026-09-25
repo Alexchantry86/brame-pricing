@@ -567,7 +567,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.31 · BADGES UNITÉ + EXCLUSION AVOIRS · 23 SEPT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.34 · TARGETS MARGE PAR SOUS-CAT/SOCIÉTÉ · 25 SEPT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -1513,8 +1513,31 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
                         <button id="btnSaveConfigTarget" style="background:var(--ink);color:var(--bg);border:0;padding:9px 18px;font-family:var(--font-sans);font-size:12.5px;font-weight:500;cursor:pointer;border-radius:3px;margin-left:12px;">Enregistrer</button>
                         <span id="configTargetStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></span>
                     </div>
-                    <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);margin-top:6px;">Sera utilisée comme ligne horizontale rouge sur le graphique Pricing × marge clients (Phase 4).</div>
+                    <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);margin-top:6px;">Utilisée comme cible par défaut sur les graphiques Pricing × marge clients (fallback si aucune cible par sous-catégorie n'est définie).</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- V10.34 · Cibles marge brute par sous-catégorie × société -->
+        <div class="panel" style="margin-top:16px;">
+            <div class="panel-header">
+                <div class="panel-title">Cibles marge brute par sous-catégorie</div>
+                <div class="panel-meta" id="tmSaveStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);">—</div>
+            </div>
+            <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);margin-bottom:12px;padding:8px 10px;background:var(--bg);border-left:3px solid var(--ink-3);">
+                ⓘ Cible de marge brute (%) par sous-catégorie et par société. Utilisée comme référence dans les onglets <strong>Suivi marge brute</strong> (ligne rouge pointillée par sous-cat), <strong>Clients à surveiller</strong> (axe Marge brute), et <strong>Analyse client</strong> (codage couleur). Modification enregistrée automatiquement (Firestore).
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="matrix" id="targetMarginsTable" style="width:100%;max-width:640px;">
+                    <thead>
+                        <tr>
+                            <th>Sous-catégorie</th>
+                            <th class="num" style="min-width:110px;">LEGAA</th>
+                            <th class="num" style="min-width:110px;">CAP'EMBAL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="targetMarginsBody"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -1858,9 +1881,25 @@ function computeInitialParams() {
                 }
             }
         }
-        out[soc] = { weights, refPrices, targetPrices, historicalPrices };
+        // V10.34 · Target marge brute par sous-catégorie (défaut 78%)
+        const targetMargins = {};
+        for (const sub of ALL_SUBCATS) {
+            if (sub !== 'Autres') targetMargins[sub] = 78;
+        }
+        out[soc] = { weights, refPrices, targetPrices, historicalPrices, targetMargins };
     }
     return out;
+}
+
+// V10.34 · Helper : retourne la cible marge brute pour (soc, sub), avec fallback
+function getTargetMarginForSubcat(soc, sub) {
+    try {
+        const s = state_params?.[soc]?.targetMargins?.[sub];
+        if (typeof s === 'number' && !isNaN(s)) return s;
+    } catch(e) {}
+    // Fallback : cible globale ou 78%
+    if (typeof _targetMarginPct === 'number') return _targetMarginPct;
+    return 78;
 }
 
 // Années historiques disponibles pour l'UI
@@ -1926,8 +1965,11 @@ function autoSaveParams() {
                 el.textContent = '💾 Sauvegarde auto ' + dt;
                 el.style.color = '#4F7B27';
             }
-            // Déclencher aussi la sync GitHub (débouncée à 5s pour ne pas spammer l'API)
-            if (typeof scheduleGhSync === 'function') scheduleGhSync(5000);
+            // V10.32 · Déclencher la sync Firestore (débouncée) + GitHub PAT si configuré
+            if (typeof scheduleFbSave === 'function') scheduleFbSave(3000);
+            if (typeof getGhConfig === 'function' && getGhConfig()) {
+                if (typeof scheduleGhSync === 'function') scheduleGhSync(5000);
+            }
         } catch(e) { console.warn('Auto-save failed:', e); }
     }, 800);
 }
@@ -3987,8 +4029,8 @@ function renderMiniMargeCard(containerEl, subcat, soc, sharedBuckets) {
         return ca > 0 ? (sumMarge(b.rows) / ca * 100) : null;
     });
 
-    // Cible marge globale
-    const target = _targetMarginPct;
+    // V10.34 · Cible marge PAR SOUS-CAT et SOCIÉTÉ (paramétrable dans Admin)
+    const target = getTargetMarginForSubcat(soc, subcat);
 
     // KPI cumul fenêtre
     const totalCa = sumCa(inWin), totalMarge = sumMarge(inWin);
@@ -4210,12 +4252,13 @@ function renderTab8() {
         const allInWin = buckets.flatMap(b => b.rows);
         const tBody = document.querySelector('#tableSuiviMarge' + suffix + ' tbody');
         const tFoot = document.querySelector('#tableSuiviMarge' + suffix + ' tfoot');
-        const target = _targetMarginPct;
         tBody.innerHTML = ALL_SUBCATS.map(sub => {
             const m = META[sub] || {group: '—'};
             const rAll = allInWin.filter(r => r.subcat === sub);
             const ca = sumCa(rAll), marge = sumMarge(rAll);
             const mp = ca > 0 ? (marge / ca * 100) : null;
+            // V10.34 · target marge PAR SOUS-CAT et société (fallback global)
+            const target = (sub === 'Autres') ? _targetMarginPct : getTargetMarginForSubcat(soc, sub);
             const ecart = (mp != null && target != null) ? (mp - target) : null;
             const pillCls = sub.startsWith('Prest')?'prest':(sub.startsWith('Fourn')?'fourn':'other');
             const mpCell = mp == null
@@ -4309,8 +4352,9 @@ function renderWatchUnified() {
                 refLabel = mode === 'target' ? 'target' : 'moyenne';
                 refUnit = ' €/m²';
             } else {
-                // Axe marge : ref = target marge % (défaut 78%) ou moyenne marge % soc
-                refValue = mode === 'target' ? _targetMarginPct : avgMargePct;
+                // V10.34 · Axe marge : target par sous-cat/soc (fallback global 78%)
+                const targetSubPct = getTargetMarginForSubcat(soc, sub);
+                refValue = mode === 'target' ? targetSubPct : avgMargePct;
                 refLabel = mode === 'target' ? 'target marge' : 'moyenne marge';
                 refUnit = ' %';
             }
@@ -4640,7 +4684,9 @@ function renderAnalyseClient() {
                 hasContent = true;
                 const clCa = sumCa(clRows), clMarge = sumMarge(clRows);
                 const clPct = clCa > 0 ? clMarge / clCa * 100 : 0;
-                const pctColor = clPct >= 78 ? '#4F7B27' : (clPct >= 60 ? '#5E5C58' : '#A32D2D');
+                // V10.34 · seuil = target marge par sous-cat/soc (fallback 78)
+                const targetSub = getTargetMarginForSubcat(soc, sub);
+                const pctColor = clPct >= targetSub ? '#4F7B27' : (clPct >= (targetSub - 18) ? '#5E5C58' : '#A32D2D');
                 const pillCls = sub.startsWith('Prest')?'prest':(sub.startsWith('Fourn')?'fourn':'other');
                 const badgeM = unitBadge(sub);
                 html += '<tr><td><span class="pill ' + pillCls + '" style="font-size:10px;">' + sub + '</span>' + badgeM + '</td><td class="num">' + fmtMoney(clCa) + '</td><td class="num">' + fmtMoney(clMarge) + '</td><td class="num" style="color:' + pctColor + ';font-weight:600;">' + clPct.toFixed(1) + '%</td></tr>';
@@ -4818,7 +4864,7 @@ function switchTab(tab) {
     const socToggle = document.getElementById('socFilter');
     const socLabel = socToggle?.previousElementSibling;
     if (socToggle) {
-        const hideSocFilter = (tab === 'suivi' || tab === 'compare' || tab === 'admin' || tab === 'margeproduit' || tab === 'suivimarge' || tab === 'analyseclient');
+        const hideSocFilter = (tab === 'global' || tab === 'suivi' || tab === 'compare' || tab === 'admin' || tab === 'margeproduit' || tab === 'suivimarge' || tab === 'analyseclient');
         socToggle.style.display = hideSocFilter ? 'none' : '';
         if (socLabel && socLabel.classList.contains('controls-label')) {
             socLabel.style.display = hideSocFilter ? 'none' : '';
@@ -6162,10 +6208,11 @@ document.getElementById('fileInputHidden').addEventListener('change', async (e) 
             const socRows = ROWS.filter(r => r.soc === soc);
             // Initialiser les structures si absentes (première fois pour cette entité)
             if (!state_params[soc]) {
-                state_params[soc] = { weights: {}, refPrices: {}, targetPrices: {}, historicalPrices: {} };
+                state_params[soc] = { weights: {}, refPrices: {}, targetPrices: {}, historicalPrices: {}, targetMargins: {} };
             }
             const p = state_params[soc];
             if (!p.historicalPrices) p.historicalPrices = {};
+            if (!p.targetMargins) p.targetMargins = {};
 
             for (const sub of ALL_SUBCATS) {
                 const subRows = socRows.filter(r => r.subcat === sub);
@@ -6181,6 +6228,8 @@ document.getElementById('fileInputHidden').addEventListener('change', async (e) 
                     // refPrices et targetPrices : ne pré-remplir que si absent
                     if (p.refPrices[sub] == null) p.refPrices[sub] = px;
                     if (p.targetPrices[sub] == null) p.targetPrices[sub] = px;
+                    // V10.34 · targetMargins : défaut 78 % si absent (préserver les valeurs existantes)
+                    if (p.targetMargins[sub] == null) p.targetMargins[sub] = 78;
                     // historicalPrices : ne pré-remplir que les cellules VIDES pour chaque année
                     if (!p.historicalPrices[sub]) p.historicalPrices[sub] = {};
                     for (const yr of HISTORY_YEARS) {
@@ -6222,8 +6271,11 @@ document.getElementById('fileInputHidden').addEventListener('change', async (e) 
         switchTab(state.tab);
         showUploadStatus('✓ ' + parsed.data.length + ' agrégats chargés' + (parsed.n_no_date ? ' (' + parsed.n_no_date + ' OF sans date exclus)' : '') + ' · ' + nbTargets + ' targets · ' + nbHist + ' prix historiques préservés', 'ok');
         showPostUploadBanner(parsed.data.length, nbTargets, nbHist, file.name);
-        // SYNC IMMÉDIATE sur GitHub après upload (si configuré)
-        if (getGhConfig()) {
+        // V10.32 · SYNC IMMÉDIATE après upload Odoo : Firestore d'abord (mode principal), GitHub PAT si configuré
+        if (typeof saveStateToFirestore === 'function' && (typeof currentUser !== 'undefined') && currentUser) {
+            setTimeout(() => saveStateToFirestore(), 500);
+        }
+        if (typeof getGhConfig === 'function' && getGhConfig()) {
             setTimeout(() => pushStateToGitHub(), 500);
         }
     } catch (err) {
@@ -6439,7 +6491,8 @@ function onFirestoreStateSnapshot(doc) {
     // Merger params (mergeParamsInto préserve les clés absentes de source)
     if (remote.params) {
         for (const soc in remote.params) {
-            if (!state_params[soc]) state_params[soc] = { weights:{}, refPrices:{}, targetPrices:{}, historicalPrices:{} };
+            if (!state_params[soc]) state_params[soc] = { weights:{}, refPrices:{}, targetPrices:{}, historicalPrices:{}, targetMargins:{} };
+            if (!state_params[soc].targetMargins) state_params[soc].targetMargins = {};
             mergeParamsInto(state_params[soc], remote.params[soc]);
         }
     }
@@ -6536,7 +6589,7 @@ document.querySelectorAll('.admin-subtab').forEach(btn => {
         // Recharger les données au clic sur chaque onglet
         if (target === 'users') loadUsers();
         else if (target === 'journal') loadJournal();
-        else if (target === 'config') loadGlobalConfig();
+        else if (target === 'config') { loadGlobalConfig(); renderTargetMarginsTable(); }
     });
 });
 
@@ -6682,6 +6735,54 @@ document.getElementById('btnSaveConfigTarget')?.addEventListener('click', async 
 });
 
 // ------ SOUS-PANEL JOURNAL ------
+// V10.34 · Rendu de la matrice targets marge brute par sous-cat × société
+function renderTargetMarginsTable() {
+    try {
+        const tbody = document.getElementById('targetMarginsBody');
+        if (!tbody) return;
+        // S'assurer que la structure existe pour chaque société
+        for (const soc of ['LEGAA', "CAP'EMBAL"]) {
+            if (!state_params[soc]) state_params[soc] = { weights:{}, refPrices:{}, targetPrices:{}, historicalPrices:{}, targetMargins:{} };
+            if (!state_params[soc].targetMargins) state_params[soc].targetMargins = {};
+            for (const sub of PONDERABLE_SUBCATS) {
+                if (state_params[soc].targetMargins[sub] == null) state_params[soc].targetMargins[sub] = 78;
+            }
+        }
+        tbody.innerHTML = PONDERABLE_SUBCATS.map(sub => {
+            const pillCls = sub.startsWith('Prest')?'prest':(sub.startsWith('Fourn')?'fourn':'other');
+            const vLegaa = state_params['LEGAA'].targetMargins[sub];
+            const vCap = state_params["CAP'EMBAL"].targetMargins[sub];
+            return '<tr>' +
+                '<td><span class="pill ' + pillCls + '" style="font-size:10px;">' + sub + '</span>' + (typeof unitBadge === 'function' ? unitBadge(sub) : '') + '</td>' +
+                '<td class="num"><input type="number" step="0.5" min="0" max="100" value="' + vLegaa.toFixed(1) + '" data-soc="LEGAA" data-sub="' + sub.replace(/"/g,'&quot;') + '" style="width:80px;padding:5px 8px;border:1px solid var(--rule);border-radius:3px;font-family:var(--font-mono);font-size:12px;background:var(--bg);text-align:right;"> <span style="color:var(--ink-3);font-family:var(--font-mono);font-size:10.5px;">%</span></td>' +
+                '<td class="num"><input type="number" step="0.5" min="0" max="100" value="' + vCap.toFixed(1) + '" data-soc="CAP\'EMBAL" data-sub="' + sub.replace(/"/g,'&quot;') + '" style="width:80px;padding:5px 8px;border:1px solid var(--rule);border-radius:3px;font-family:var(--font-mono);font-size:12px;background:var(--bg);text-align:right;"> <span style="color:var(--ink-3);font-family:var(--font-mono);font-size:10.5px;">%</span></td>' +
+                '</tr>';
+        }).join('');
+        // Handlers input
+        tbody.querySelectorAll('input[data-soc]').forEach(inp => {
+            inp.addEventListener('change', () => {
+                const soc = inp.dataset.soc;
+                const sub = inp.dataset.sub;
+                const val = parseFloat(inp.value);
+                if (isNaN(val) || val < 0 || val > 100) {
+                    inp.style.borderColor = '#A32D2D';
+                    return;
+                }
+                inp.style.borderColor = 'var(--rule)';
+                state_params[soc].targetMargins[sub] = val;
+                // Feedback + sauvegarde
+                const st = document.getElementById('tmSaveStatus');
+                if (st) { st.textContent = '💾 Modif enregistrée · ' + new Date().toLocaleTimeString('fr-FR'); st.style.color = '#4F7B27'; }
+                if (typeof autoSaveParams === 'function') autoSaveParams();
+                // Refresh render courant si applicable
+                if (state.tab === 'suivimarge' && typeof renderTab8 === 'function') renderTab8();
+                if (state.tab === 'watch' && typeof renderWatchUnified === 'function') renderWatchUnified();
+                if (state.tab === 'analyseclient' && typeof renderAnalyseClient === 'function') renderAnalyseClient();
+            });
+        });
+    } catch(e) { console.error('[renderTargetMarginsTable]', e); }
+}
+
 async function loadJournal() {
     const tbody = document.getElementById('journalTable');
     if (!tbody) return;
