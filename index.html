@@ -337,6 +337,28 @@ input.weight-inline:focus { background: var(--panel); border-color: var(--ink); 
 
     /* --- Sécurité : évite qu'un élément déborde et casse le layout --- */
 
+    /* V10.37 · Refonte UX mobile — empiler les grilles 2 col principales et compacter */
+    /* Grilles 2 col inline empilent en 1 col sur mobile (sauf sous-grilles KPIs) */
+    div[style*="grid-template-columns:1fr 1fr"],
+    div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+    /* KPIs 3-col empilent en 2×2 sur mobile pour rester lisibles */
+    section.kpis[style*="grid-template-columns:1fr 1fr 1fr"],
+    section.kpis[style*="grid-template-columns: 1fr 1fr 1fr"] {
+        grid-template-columns: 1fr 1fr !important;
+    }
+    /* Panels : padding et margin-bottom réduits pour densifier */
+    .panel { margin-bottom: 12px !important; padding: 12px !important; }
+    .panel-header { margin-bottom: 8px; }
+    .panel-sub { font-size: 10.5px !important; line-height: 1.4 !important; margin-bottom: 8px; }
+    /* Grille mini-cards par sous-cat : 1 par ligne sur mobile (plus lisible) */
+    .miniGrid { grid-template-columns: 1fr !important; gap: 10px !important; }
+    /* Charts : garantir une hauteur minimale visible même en portrait étroit */
+    .chart-wrap { min-height: 200px; }
+    /* Section titres (Prestations / Fournitures) plus compacte */
+    .subsection { font-size: 12px !important; margin: 12px 0 6px !important; padding: 6px 10px !important; }
+
     /* V10.24 · Masquer les métadonnées et labels superflus sur mobile */
     /* Bloc "date + metaTotal" (encart avec dates et stats) */
     .header-right .meta { display: none !important; }
@@ -567,7 +589,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.35 · SUIVI MARGE EMPILÉ + FIX RENDU · 25 SEPT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.37 · REFONTE UX MOBILE · 25 SEPT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -1051,7 +1073,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div class="panel-meta">100% = CA total société sur la période</div>
         </div>
         <div class="panel-sub">Voir si les deux sociétés ont un mix produit similaire ou pas — un mix différent explique en partie les écarts de pricing moyen</div>
-        <div class="chart-wrap"><canvas id="chartCompareMix"></canvas></div>
+        <div class="chart-wrap" style="height:260px;"><canvas id="chartCompareMix"></canvas></div>
     </div>
 
     <div class="panel">
@@ -3671,7 +3693,8 @@ function renderTab4() {
         options: {
             responsive: true, maintainAspectRatio: false, indexAxis: 'y',
             plugins: {
-                legend: { position: 'right', labels: { font: { family: 'IBM Plex Sans', size: 11 }, boxWidth: 12, padding: 6 } },
+                // V10.37 · légende en bas sur mobile pour libérer l'espace horizontal
+                legend: { position: window.innerWidth <= 768 ? 'bottom' : 'right', labels: { font: { family: 'IBM Plex Sans', size: 11 }, boxWidth: 12, padding: 6 } },
                 tooltip: {
                     callbacks: { label: c => c.dataset.label + ' : ' + c.parsed.x.toFixed(1) + '%' },
                     titleFont: { family: 'IBM Plex Sans', size: 12 }, bodyFont: { family: 'IBM Plex Mono', size: 11 }
@@ -4610,7 +4633,7 @@ function renderAnalyseClient() {
                 clientsKpi +
                 '<div class="kpi"><div class="kpi-eyebrow">CA HT (BdC)</div><div class="kpi-value">' + fmtMoney(caBdC) + '</div><div class="kpi-sub">' + nOF + ' OF</div></div>' +
                 '<div class="kpi"><div class="kpi-eyebrow">Marge brute</div><div class="kpi-value">' + fmtMoney(margeBdC) + '</div><div class="kpi-sub">' + margePct.toFixed(1) + ' % marge</div></div>' +
-                '<div class="kpi"><div class="kpi-eyebrow">Ratio €/m²</div><div class="kpi-value">' + ratioBdC.toFixed(2) + '</div><div class="kpi-sub">' + fmtNum(surfBdC) + ' m²</div></div>' +
+                // V10.36 · KPI Ratio €/m² retiré : agrégeait des unités hétérogènes (m² 6f + m² plancher + m³) → indicateur non pertinent en cumul
                 '<div class="kpi"><div class="kpi-eyebrow">Perdus + Annulés</div><div class="kpi-value">' + fmtMoney(caPerdu + caAnnule) + '</div><div class="kpi-sub">' + (nPerdu + nAnnule) + ' devis</div></div>' +
                 '<div class="kpi"><div class="kpi-eyebrow">Backlog</div><div class="kpi-value">' + fmtMoney(caBacklog) + '</div><div class="kpi-sub">' + nBacklog + ' devis en cours</div></div>';
         }
