@@ -589,7 +589,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.37 · REFONTE UX MOBILE · 25 SEPT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.39 · DATE DEVIS PRIORITAIRE + GARDE FUTUR · 28 SEPT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -646,6 +646,22 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
         <button class="toggle-btn active" data-status="bdc">Bon de commande</button>
         <button class="toggle-btn" data-status="annule">Annulé</button>
         <button class="toggle-btn" data-status="perdu">Perdu</button>
+    </div>
+    <!-- V10.38 · Filtre vendeur multi-select (visible sur onglets 01-06) -->
+    <div id="vendeurFilterWrap" style="display:inline-flex; align-items:center; gap:10px; margin-left:12px;">
+        <span class="controls-label">Vendeur</span>
+        <div class="ac-multi" id="vendeurMulti">
+            <button class="ac-multi-trigger" type="button" style="min-width:180px;">
+                <span class="ac-multi-label" id="vendeurMultiLabel">Tous les vendeurs</span>
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5L6 7.5L9 4.5"/></svg>
+            </button>
+            <div class="ac-multi-panel" id="vendeurMultiPanel" style="width:260px;">
+                <div class="ac-multi-actions">
+                    <button type="button" data-action="none">Tout effacer</button>
+                </div>
+                <div class="ac-multi-list" id="vendeurMultiList"></div>
+            </div>
+        </div>
     </div>
     <span id="socStats" style="font-family:var(--font-mono); font-size:11px; color:var(--ink-3); margin-left:auto;">…</span>
 </div>
@@ -2122,17 +2138,23 @@ const state = {
     // V10.26 · Filtre statut devis (multi-choix). Par défaut = bons de commande seuls (comportement historique).
     // Valeurs possibles : 'bdc' (bon de commande) · 'annule' (annulé) · 'perdu' (perdu)
     statusFilter: ['bdc'],
+    // V10.38 · Filtre vendeur (multi-choix). [] = tous les vendeurs (comportement historique).
+    vendeurFilter: [],
     compareMode: 'ref'  // 'ref' = base 100 (prix référence) · 'target' = comparaison vs target politique prix
 };
 
-// V10.26 · Rafraîchit ROWS depuis ROWS_MASTER selon state.statusFilter
+// V10.26 · Rafraîchit ROWS depuis ROWS_MASTER selon state.statusFilter + V10.38 vendeurFilter
 function refreshRowsFromStatusFilter() {
     try {
-        const wanted = new Set(state.statusFilter && state.statusFilter.length > 0 ? state.statusFilter : ['bdc']);
+        const wantedStatus = new Set(state.statusFilter && state.statusFilter.length > 0 ? state.statusFilter : ['bdc']);
+        const vendeurArr = Array.isArray(state.vendeurFilter) ? state.vendeurFilter : [];
+        const wantedVendeur = vendeurArr.length > 0 ? new Set(vendeurArr) : null;
         ROWS.length = 0;
         for (const r of ROWS_MASTER) {
-            const st = r.status || 'bdc';  // rows sans champ status = bdc par défaut (rétro-compat)
-            if (wanted.has(st)) ROWS.push(r);
+            const st = r.status || 'bdc';
+            if (!wantedStatus.has(st)) continue;
+            if (wantedVendeur && !wantedVendeur.has(r.vendeur || '—')) continue;
+            ROWS.push(r);
         }
     } catch (e) { console.error('[refreshRowsFromStatusFilter]', e); }
 }
@@ -2146,6 +2168,11 @@ function applyFilters(rows, tabKey) {
     if (sel && sel.length > 0) {
         const set = new Set(sel);
         out = out.filter(r => set.has(r.client));
+    }
+    // V10.38 · Filtre vendeur global (piloté par le dropdown header)
+    if (Array.isArray(state.vendeurFilter) && state.vendeurFilter.length > 0) {
+        const setV = new Set(state.vendeurFilter);
+        out = out.filter(r => setV.has(r.vendeur || '—'));
     }
     return out;
 }
@@ -4897,6 +4924,14 @@ function switchTab(tab) {
             socLabel.style.display = hideSocFilter ? 'none' : '';
         }
     }
+    // V10.38 · Masquer le filtre vendeur sur onglets 07 (margeproduit), 08 (analyseclient), 09 (admin), 00 (params)
+    try {
+        const vendeurWrap = document.getElementById('vendeurFilterWrap');
+        if (vendeurWrap) {
+            const hideVendeur = (tab === 'params' || tab === 'margeproduit' || tab === 'analyseclient' || tab === 'admin');
+            vendeurWrap.style.display = hideVendeur ? 'none' : 'inline-flex';
+        }
+    } catch(e) { console.error('[hideVendeurFilter]', e); }
     // V10.26 · Masquer le filtre client sur onglets 1 (global), 2 (suivimarge), 3 (suivi), 5 (compare)
     // Onglets où le client filter est présent : global, suivi, clients, compare, margeproduit, suivimarge
     // À masquer : global, suivimarge, suivi, compare — à garder : clients, margeproduit
@@ -5272,6 +5307,97 @@ document.querySelectorAll('#statusFilterToggle [data-status]').forEach(btn => {
         } catch (e) { console.error('[statusFilter]', e); }
     });
 });
+
+// V10.38 · Dropdown multi-select filtre vendeur (global · visible sur onglets 01-06)
+function getAllVendeurs() {
+    // Récupère la liste des vendeurs depuis ROWS_MASTER (tous statuts), triée par CA décroissant
+    const caByV = {};
+    for (const r of (typeof ROWS_MASTER !== 'undefined' ? ROWS_MASTER : ROWS)) {
+        const v = r.vendeur || '—';
+        caByV[v] = (caByV[v] || 0) + (r.ca || 0);
+    }
+    return Object.entries(caByV)
+        .sort((a, b) => b[1] - a[1])
+        .map(([v, ca]) => ({ vendeur: v, ca: ca }));
+}
+
+function renderVendeurList() {
+    try {
+        const list = document.getElementById('vendeurMultiList');
+        if (!list) return;
+        const vendeurs = getAllVendeurs();
+        const selected = new Set(state.vendeurFilter || []);
+        list.innerHTML = vendeurs.map(v => {
+            const isSel = selected.has(v.vendeur);
+            const caStr = v.ca >= 1000 ? (v.ca / 1000).toFixed(0) + ' k€' : Math.round(v.ca) + ' €';
+            return '<label class="ac-multi-item' + (isSel ? ' selected' : '') + '">' +
+                '<input type="checkbox" data-vendeur="' + v.vendeur.replace(/"/g, '&quot;') + '"' + (isSel ? ' checked' : '') + '>' +
+                '<span>' + v.vendeur + '</span>' +
+                '<span class="ac-multi-ca">' + caStr + '</span>' +
+                '</label>';
+        }).join('');
+        list.querySelectorAll('input[data-vendeur]').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const v = cb.dataset.vendeur;
+                const arr = Array.isArray(state.vendeurFilter) ? [...state.vendeurFilter] : [];
+                if (cb.checked) { if (!arr.includes(v)) arr.push(v); }
+                else { const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); }
+                state.vendeurFilter = arr;
+                cb.closest('.ac-multi-item').classList.toggle('selected', cb.checked);
+                updateVendeurLabel();
+                refreshRowsFromStatusFilter();
+                updateSocStats();
+                switchTab(state.tab);
+            });
+        });
+    } catch (e) { console.error('[renderVendeurList]', e); }
+}
+
+function updateVendeurLabel() {
+    try {
+        const label = document.getElementById('vendeurMultiLabel');
+        const trigger = document.querySelector('#vendeurMulti .ac-multi-trigger');
+        if (!label) return;
+        const arr = Array.isArray(state.vendeurFilter) ? state.vendeurFilter : [];
+        if (arr.length === 0) { label.textContent = 'Tous les vendeurs'; if (trigger) trigger.classList.remove('active'); }
+        else if (arr.length === 1) { label.textContent = arr[0]; if (trigger) trigger.classList.add('active'); }
+        else { label.textContent = arr.length + ' vendeurs'; if (trigger) trigger.classList.add('active'); }
+    } catch (e) { console.error('[updateVendeurLabel]', e); }
+}
+
+// Init au chargement
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        renderVendeurList();
+        updateVendeurLabel();
+        const trigger = document.querySelector('#vendeurMulti .ac-multi-trigger');
+        const panel = document.getElementById('vendeurMultiPanel');
+        const noneBtn = document.querySelector('#vendeurMultiPanel [data-action="none"]');
+        if (trigger && panel && !trigger.dataset.bound) {
+            trigger.dataset.bound = '1';
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.querySelectorAll('.ac-multi-panel.open').forEach(p => { if (p !== panel) p.classList.remove('open'); });
+                document.querySelectorAll('.ws-multi-panel.open').forEach(p => p.classList.remove('open'));
+                panel.classList.toggle('open');
+            });
+            panel.addEventListener('click', e => e.stopPropagation());
+        }
+        if (noneBtn && !noneBtn.dataset.bound) {
+            noneBtn.dataset.bound = '1';
+            noneBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                state.vendeurFilter = [];
+                renderVendeurList();
+                updateVendeurLabel();
+                refreshRowsFromStatusFilter();
+                updateSocStats();
+                switchTab(state.tab);
+            });
+        }
+    } catch (e) { console.error('[init vendeurMulti]', e); }
+});
+
 document.getElementById('exportPdf').addEventListener('click', async () => {
     toast('Génération PDF…');
     const today = new Date().toISOString().slice(0,10);
@@ -5742,13 +5868,22 @@ function parseOdooExport(rawRows) {
         // Société : v4 = `Societe`, v3/legacy = `ENTREPRISE`
         const soc = r['Societe'] || r['ENTREPRISE'] || '—';
         const client = r['Client Societe'] || r['Client'] || '—';
+        // V10.38 · Vendeur (v4 uniquement) — trim + fallback '—'
+        const vendeur = String(r['Vendeur'] || '').trim() || '—';
 
-        // Date coalescente : v4 ajoute `Date du devis`, on la garde en dernier fallback
-        let d = excelDateToJSDate(r['Date']) || excelDateToJSDate(r['Date de confirmation OF'])
+        // V10.39 · Priorité : date "commerciale" (Date du devis en v4) > confirmation OF > livraison effective > planifiée (dernier recours)
+        // Rationale : le pricing/marge doit être imputé au mois où le prix a été fixé, pas à la date de livraison future.
+        // v3/legacy sans "Date du devis" → tombe sur Date de confirmation OF (comportement historique préservé).
+        let d = excelDateToJSDate(r['Date du devis'])
+              || excelDateToJSDate(r['Date de confirmation OF'])
+              || excelDateToJSDate(r['Date'])
               || excelDateToJSDate(r['Date effective de livraison'])
-              || excelDateToJSDate(r['Date de livraison planifiee'])
-              || excelDateToJSDate(r['Date du devis']);
+              || excelDateToJSDate(r['Date de livraison planifiee']);
         if (!d) { nNoDate++; continue; }
+        // V10.39 · Garde-fou : ignorer les dates > 3 mois dans le futur (dates de livraison planifiée aberrantes)
+        const _now = new Date();
+        const _limitFutur = new Date(_now.getFullYear(), _now.getMonth() + 3, _now.getDate());
+        if (d > _limitFutur) { nNoDate++; continue; }
         if (!maxDate || d > maxDate) maxDate = d;
 
         const y = d.getFullYear(), m = d.getMonth()+1;
@@ -5760,11 +5895,11 @@ function parseOdooExport(rawRows) {
         const iso_q = y + '-Q' + q;
         const iso_s = y + '-S' + s;
 
-        // V10.26 · statut dans la clé pour permettre le filtrage UI
-        const key = [soc, status, client, subcat, iso_month, iso_week, iso_q, iso_s, iso_y].join('|');
+        // V10.26 · statut dans la clé pour permettre le filtrage UI · V10.38 · vendeur ajouté
+        const key = [soc, status, vendeur, client, subcat, iso_month, iso_week, iso_q, iso_s, iso_y].join('|');
         let ent = agg.get(key);
         if (!ent) {
-            ent = { soc, status, client, subcat, iso_month, iso_week, iso_q, iso_s, iso_y,
+            ent = { soc, status, vendeur, client, subcat, iso_month, iso_week, iso_q, iso_s, iso_y,
                     n: 0, n_pointed: 0, qty: 0, surf: 0, ca: 0, cout: 0, marge: 0, dprev_h: 0, dreel_h: 0 };
             agg.set(key, ent);
         }
@@ -6203,6 +6338,8 @@ document.getElementById('fileInputHidden').addEventListener('change', async (e) 
         ROWS_MASTER.length = 0;
         for (const r of parsed.data) ROWS_MASTER.push(r);
         refreshRowsFromStatusFilter();
+        // V10.38 · rafraîchir liste vendeurs (nouveaux vendeurs après upload)
+        if (typeof renderVendeurList === 'function') { renderVendeurList(); updateVendeurLabel(); }
         // Mise à jour date de l'upload (fichier source + timestamp)
         const now = new Date();
         const nowStr = now.toLocaleString('fr-FR', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
