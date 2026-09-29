@@ -589,7 +589,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.40 · FIX MARGE BRUTE (CA − COÛT RECALCULÉ) · 29 SEPT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.41 · FIX META BERCEAU (COMPARATIF + MARGE PRODUIT) · 29 SEPT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -1873,6 +1873,14 @@ const ORDER = (function() {
     }
     return base;
 })();
+// V10.41 · injection META Berceau si absentes du payload (sinon META[sub].color plante
+// tous les rendus qui itèrent ALL_SUBCATS : mix comparatif, tableau détaillé, marge par produit)
+if (!META['Prestation Berceau']) {
+    META['Prestation Berceau'] = { group: 'Prestation', produit: 'Berceau', protection: '—', color: '#8B5E34' };
+}
+if (!META['Fourniture Berceau']) {
+    META['Fourniture Berceau'] = { group: 'Fourniture', produit: 'Berceau', protection: '—', color: '#C4A47C' };
+}
 const COLOR_DANGER = '#A32D2D';
 const COLOR_INK = '#1A1916';
 const COLOR_INK3 = '#92908A';
