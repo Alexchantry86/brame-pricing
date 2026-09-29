@@ -589,7 +589,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.39 · DATE DEVIS PRIORITAIRE + GARDE FUTUR · 28 SEPT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.40 · FIX MARGE BRUTE (CA − COÛT RECALCULÉ) · 29 SEPT 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -5926,9 +5926,12 @@ function parseOdooExport(rawRows) {
                 surfContrib = parseFloat(r['Total m2/6 faces']) || 0;
             }
             caContrib    = parseFloat(r['Prix Total']) || 0;
-            // v4 : Marge brute est UNITAIRE → × qty pour avoir le total
-            margeContrib = (parseFloat(r['Marge brute']) || 0) * qty;
-            coutContrib  = caContrib - margeContrib;
+            // V10.40 · marge recalculée : Odoo remonte une `Marge brute` incohérente
+            // (lignes avec Prix Total=0 mais marge>0 sur les devis Qty=0), ce qui gonfle
+            // artificiellement le total et donne des marges >100%. On calcule nous-mêmes
+            // marge = CA - coût pour rester cohérent.
+            coutContrib  = cout_u * qty;
+            margeContrib = caContrib - coutContrib;
             // V10.31 · exclure les lignes à Prix Total < 0 (avoirs, erreurs de saisie)
             if (caContrib < 0) { nNegatif++; continue; }
         } else if (format === 'v3') {
