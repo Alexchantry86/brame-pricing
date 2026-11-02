@@ -589,7 +589,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.41 · FIX META BERCEAU (COMPARATIF + MARGE PRODUIT) · 29 SEPT 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.42 · FIX RACE IMPORT/FIRESTORE (ANCIEN FICHIER REVIENT) · 02 NOV 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -6349,6 +6349,10 @@ document.getElementById('fileInputHidden').addEventListener('change', async (e) 
         ROWS_MASTER.length = 0;
         for (const r of parsed.data) ROWS_MASTER.push(r);
         refreshRowsFromStatusFilter();
+        // V10.42 · POSER le lock timestamp IMMÉDIATEMENT après le parse local :
+        // tout snapshot Firestore antérieur (snapshot initial retardé, cache) sera rejeté
+        // par onFirestoreStateSnapshot et n'écrasera pas les données qu'on vient de charger.
+        if (typeof _stateLastLocalSaveTs !== 'undefined') _stateLastLocalSaveTs = Date.now();
         // V10.38 · rafraîchir liste vendeurs (nouveaux vendeurs après upload)
         if (typeof renderVendeurList === 'function') { renderVendeurList(); updateVendeurLabel(); }
         // Mise à jour date de l'upload (fichier source + timestamp)
@@ -6649,9 +6653,13 @@ function onFirestoreStateSnapshot(doc) {
         return;
     }
     const remote = doc.data();
-    // Ignorer si c'est notre propre écriture (évite le loop d'update)
-    if (remote.saved_at_client_ms && Math.abs(remote.saved_at_client_ms - _stateLastLocalSaveTs) < 500) {
-        console.log('[firestore] Snapshot ignoré (notre propre écriture)');
+    // V10.42 · Ignorer tout snapshot NON STRICTEMENT PLUS RÉCENT que notre dernier
+    // timestamp local. Couvre deux cas :
+    //  - notre propre écriture qui revient (saved_at_client_ms ≈ _stateLastLocalSaveTs)
+    //  - snapshot ancien (initial retardé, cache Firestore) arrivant après un upload local
+    //    → sinon il écrase les données qu'on vient de parser (bug "les anciennes données reviennent 2s après l'import")
+    if (remote.saved_at_client_ms && _stateLastLocalSaveTs > 0 && remote.saved_at_client_ms <= _stateLastLocalSaveTs) {
+        console.log('[firestore] Snapshot ignoré (plus ancien ou égal à notre dernier save local)');
         return;
     }
     console.log('[firestore] Snapshot reçu ·', remote.data?.length, 'agrégats · par', remote.saved_by_email);
