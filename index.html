@@ -589,7 +589,7 @@ body.authenticated .auth-check-overlay { opacity: 0; pointer-events: none; }
             <div id="metaTotal">…</div>
         </div>
         <div class="dashboard-meta" style="margin-top:10px;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.42 · FIX RACE IMPORT/FIRESTORE (ANCIEN FICHIER REVIENT) · 02 NOV 2026</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:1px;">VERSION 10.43 · SYNC FIRESTORE AUTO POST-IMPORT · 02 NOV 2026</div>
             <div>Fichier source : <strong id="lastUpdate">…</strong></div>
             <div id="syncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -6450,9 +6450,18 @@ document.getElementById('fileInputHidden').addEventListener('change', async (e) 
         switchTab(state.tab);
         showUploadStatus('✓ ' + parsed.data.length + ' agrégats chargés' + (parsed.n_no_date ? ' (' + parsed.n_no_date + ' OF sans date exclus)' : '') + ' · ' + nbTargets + ' targets · ' + nbHist + ' prix historiques préservés', 'ok');
         showPostUploadBanner(parsed.data.length, nbTargets, nbHist, file.name);
-        // V10.32 · SYNC IMMÉDIATE après upload Odoo : Firestore d'abord (mode principal), GitHub PAT si configuré
+        // V10.43 · SYNC IMMÉDIATE AUTO + feedback dans la bannière.
+        // Plus de bouton "Télécharger state.json" : la sync Firestore propage à tout le monde.
         if (typeof saveStateToFirestore === 'function' && (typeof currentUser !== 'undefined') && currentUser) {
-            setTimeout(() => saveStateToFirestore(), 500);
+            try {
+                await saveStateToFirestore();
+                const dt = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+                if (typeof updatePostUploadBannerSync === 'function') updatePostUploadBannerSync(true, 'Synchronisé sur Firestore à ' + dt + ' — accessible à toute l’équipe');
+            } catch(e) {
+                if (typeof updatePostUploadBannerSync === 'function') updatePostUploadBannerSync(false, 'Sync Firestore échouée : ' + (e.message || e.code || e));
+            }
+        } else if (typeof updatePostUploadBannerSync === 'function') {
+            updatePostUploadBannerSync(false, 'Non connecté — données chargées localement uniquement');
         }
         if (typeof getGhConfig === 'function' && getGhConfig()) {
             setTimeout(() => pushStateToGitHub(), 500);
@@ -6465,48 +6474,45 @@ document.getElementById('fileInputHidden').addEventListener('change', async (e) 
 
 // Bannière de confirmation post-upload avec bouton "Sauvegarder maintenant"
 function showPostUploadBanner(nbAgg, nbTargets, nbHist, filename) {
-    // Retirer bannière précédente si existante
+    // V10.43 · Bannière simplifiée : sync Firestore est automatique depuis V10.32,
+    // plus besoin des boutons legacy "Télécharger state.json" + "Enregistrer localement".
     document.getElementById('postUploadBanner')?.remove();
     const banner = document.createElement('div');
     banner.id = 'postUploadBanner';
-    banner.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;background:var(--panel);border:2px solid #4F7B27;border-radius:6px;padding:18px 22px;box-shadow:0 4px 20px rgba(26,25,22,0.15);max-width:400px;font-family:var(--font-sans);';
+    banner.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;background:var(--panel);border:2px solid #4F7B27;border-radius:6px;padding:18px 22px;box-shadow:0 4px 20px rgba(26,25,22,0.15);max-width:380px;font-family:var(--font-sans);';
     banner.innerHTML = `
-        <div style="font-family:var(--font-mono);font-size:10px;color:#4F7B27;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:500;">✓ Import réussi</div>
-        <div style="font-size:14px;font-weight:500;margin-bottom:6px;color:var(--ink);">${filename}</div>
-        <div style="font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);margin-bottom:14px;line-height:1.5;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+            <div style="font-family:var(--font-mono);font-size:10px;color:#4F7B27;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;">✓ Import réussi</div>
+            <button id="btnBannerClose" style="background:transparent;border:0;padding:0;font-family:var(--font-sans);font-size:16px;cursor:pointer;color:var(--ink-3);line-height:1;">×</button>
+        </div>
+        <div style="font-size:14px;font-weight:500;margin:6px 0;color:var(--ink);">${filename}</div>
+        <div style="font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);margin-bottom:12px;line-height:1.5;">
             ${nbAgg.toLocaleString('fr-FR')} agrégats chargés<br>
-            ${nbTargets} targets préservés<br>
-            ${nbHist} prix historiques préservés
+            ${nbTargets} targets préservés · ${nbHist} prix historiques préservés
         </div>
-        <div style="font-family:var(--font-mono);font-size:10.5px;color:#154E80;background:rgba(21,78,128,0.08);padding:8px 10px;border-radius:3px;margin-bottom:12px;line-height:1.5;">
-            ⚠ Ces données sont uniquement dans ce navigateur.<br>
-            <strong>Pour que tout le monde y ait accès</strong>, publie state.json sur GitHub ↓
+        <div id="bannerSyncStatus" style="font-family:var(--font-mono);font-size:11px;color:var(--ink-2);background:var(--bg);padding:9px 11px;border-radius:3px;border-left:3px solid #92908A;line-height:1.5;">
+            ☁ Sync Firestore en cours…
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-            <button id="btnBannerPublish" style="background:#154E80;color:white;border:0;padding:11px 16px;font-family:var(--font-sans);font-size:13px;font-weight:500;cursor:pointer;border-radius:3px;">↓ Télécharger state.json à publier</button>
-            <button id="btnBannerSave" style="background:transparent;color:var(--ink-2);border:1px solid var(--rule);padding:9px 14px;font-family:var(--font-sans);font-size:12px;cursor:pointer;border-radius:3px;">💾 Enregistrer localement (ce navigateur seulement)</button>
-            <button id="btnBannerClose" style="background:transparent;border:0;padding:6px;font-family:var(--font-sans);font-size:11px;cursor:pointer;color:var(--ink-3);text-decoration:underline;">Fermer</button>
-        </div>
-        <div id="bannerFeedback" style="font-family:var(--font-mono);font-size:11px;color:#4F7B27;margin-top:10px;display:none;"></div>
     `;
     document.body.appendChild(banner);
-    document.getElementById('btnBannerPublish').addEventListener('click', () => {
-        exportStateJSON();
-        const fb = document.getElementById('bannerFeedback');
-        fb.textContent = `✓ state.json téléchargé — mets-le sur GitHub (remplace l’existant)`;
-        fb.style.display = 'block';
-    });
-    document.getElementById('btnBannerSave').addEventListener('click', () => {
-        const ok = saveParamsToStorage();
-        const fb = document.getElementById('bannerFeedback');
-        if (ok) {
-            fb.textContent = '✓ Enregistré dans localStorage (ce navigateur uniquement)';
-            fb.style.display = 'block';
-        }
-    });
     document.getElementById('btnBannerClose').addEventListener('click', () => banner.remove());
-    // Fermeture automatique après 60s si pas de clic
-    setTimeout(() => { if (document.getElementById('postUploadBanner')) banner.remove(); }, 60000);
+    return banner;
+}
+
+function updatePostUploadBannerSync(ok, message) {
+    const el = document.getElementById('bannerSyncStatus');
+    if (!el) return;
+    if (ok) {
+        el.style.borderLeftColor = '#4F7B27';
+        el.style.color = '#4F7B27';
+        el.innerHTML = '✓ ' + message;
+        // Fermeture auto 4s après succès
+        setTimeout(() => document.getElementById('postUploadBanner')?.remove(), 4000);
+    } else {
+        el.style.borderLeftColor = '#A32D2D';
+        el.style.color = '#A32D2D';
+        el.innerHTML = '⚠ ' + message;
+    }
 }
 
 // ==========================================================================
